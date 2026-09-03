@@ -1,2 +1,29 @@
+# BANKAI RACE CONTROL
+
+# Core UI / runtime
+streamlit>=1.40
 rich
 psutil
+
+# HTTP / API providers
+requests>=2.32
+openai>=1.50
+
+# AI / local model support
+transformers
+accelerate
+sentencepiece
+torch
+sentence-transformers
+
+# Data / ML utilities
+pandas
+numpy
+scikit-learn
+joblib
+
+# Development / validation
+pytest
+ruff
+mypy
+pyyaml

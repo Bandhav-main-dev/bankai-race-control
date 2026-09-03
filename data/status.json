@@ -1,0 +1,14 @@
+{
+  "selected_project": "Einstein AI V2",
+  "mode": "\ud83d\udfe2 GREEN FLAG",
+  "current_lap": 1,
+  "target_lap": 10,
+  "session_seconds": 0,
+  "session_running": false,
+  "driver_message": "BANKAI AI telemetry online.",
+  "last_radio": "RACE CONTROL \u2192 SYSTEM: Telemetry online.",
+  "radio_history": [],
+  "last_audio": "",
+  "last_updated": "",
+  "ai_messages": []
+}

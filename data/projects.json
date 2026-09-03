@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Einstein AI V2",
+    "status": "ACTIVE",
+    "phase": "Reasoning Engine",
+    "health": "OPTIMAL",
+    "priority": "CRITICAL",
+    "progress": 82,
+    "technology": "Python \u2022 Transformers \u2022 Cognitive Architecture",
+    "repository": "Bandhav-main-dev/Einstain-ai-brain-v2",
+    "mission": "Reconstruct Einstein-style scientific reasoning.",
+    "next_operation": "Advance reasoning evaluation and model engineering."
+  },
+  {
+    "name": "Einstein Brain V1",
+    "status": "ACTIVE",
+    "phase": "Knowledge Acquisition",
+    "health": "STABLE",
+    "priority": "HIGH",
+    "progress": 67,
+    "technology": "Python \u2022 NLP \u2022 Scientific Corpus",
+    "repository": "Bandhav-main-dev/einstein-brain-v1",
+    "mission": "Build a verified Einstein scientific knowledge base.",
+    "next_operation": "Expand and validate scientific source coverage."
+  },
+  {
+    "name": "Patrick Jane AI",
+    "status": "RESEARCH",
+    "phase": "Dataset Architecture",
+    "health": "RESEARCH",
+    "priority": "HIGH",
+    "progress": 25,
+    "technology": "Python \u2022 NLP \u2022 Behavioural Reasoning",
+    "repository": "Bandhav-main-dev/patrick-jane-ai",
+    "mission": "Explore behavioural inference and reasoning patterns.",
+    "next_operation": "Design reasoning datasets and evaluation tasks."
+  }
+]

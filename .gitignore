@@ -34,6 +34,11 @@ data/logs/
 .env
 .env.*
 *.local.env
+.streamlit/secrets.toml
+credentials.json
+token.json
+*.key
+*.pem
 
 # Ruflo / local AI secrets
 config/ruflo.local.env
