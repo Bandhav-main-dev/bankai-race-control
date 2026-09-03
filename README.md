@@ -1,12 +1,12 @@
-# ⚔️ BANKAI RACE CONTROL
+# BANKAI RACE CONTROL
 
-## Personal Project Command Center
+## Personal AI Project Command Center
 
-**Bleach × Formula 1 × AI**
+Bleach x Formula 1 x AI
 
-Bankai Race Control is a personal dashboard for
-monitoring and managing AI, machine learning,
-Django, Android, research, and software projects.
+Bankai Race Control is a Streamlit dashboard for managing
+and monitoring AI, ML, Django, Android, research and
+software projects.
 
 ## Features
 
@@ -14,70 +14,78 @@ Django, Android, research, and software projects.
 - Project progress tracking
 - Race Control telemetry
 - Reiatsu project health
-- Project lifecycle
+- Zanpakuto implementation progress
+- Bankai milestone tracking
 - Task management
 - AI Lab
 - Analytics
-- Dark Bleach × F1 inspired interface
-- Google Colab compatible
+- GitHub project integration
+- Streamlit Community Cloud support
 
-## Current Projects
+## Project Lifecycle
 
-- Einstein AI V2
-- Patrick Jane AI
-- PickWise
-- Django Projects
-- Android Lab
-- ML Experiments
+IDEA
+RESEARCH
+ARCHITECTURE
+IMPLEMENTATION
+TESTING
+INTEGRATION
+DEPLOYMENT
+COMPLETED
 
 ## Project Structure
 
-```text
-bankai_race_control/
-├── app.py
-├── data/
-│   └── projects.json
-├── pages/
-├── assets/
-│   ├── images/
-│   └── sounds/
-├── styles/
-│   └── dashboard.css
-├── .streamlit/
-│   └── config.toml
-├── requirements.txt
-├── README.md
-└── .gitignore
-```
+bankai-race-control/
+|-- app.py
+|-- data/
+|   |-- projects.json
+|-- pages/
+|-- assets/
+|-- styles/
+|   |-- dashboard.css
+|-- .streamlit/
+|   |-- config.toml
+|-- requirements.txt
+|-- packages.txt
+|-- README.md
+|-- .gitignore
 
 ## Run Locally
 
-```bash
 pip install -r requirements.txt
+
 streamlit run app.py
-```
+
+## Streamlit Community Cloud
+
+Repository:
+Bandhav-main-dev/bankai-race-control
+
+Branch:
+main
+
+Main file:
+app.py
 
 ## Theme
 
-### Bleach
-
+Bleach
 - Bankai
 - Reiatsu
 - Zanpakuto
 - Soul Society
 
-### Formula 1
-
+Formula 1
 - Race Control
 - Lap
 - Sector
 - Telemetry
 - Grid
 
-## Status
-
-🚧 Active Development
-
 ## Author
 
-YOUR_GITHUB_USERNAME
+GitHub: https://github.com/Bandhav-main-dev
+
+## Status
+
+Active Development

@@ -1,24 +1,19 @@
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*.log
 
 .env
 .env.*
+.streamlit/secrets.toml
 
 .venv/
 venv/
 env/
 
-.streamlit/secrets.toml
-
 .ipynb_checkpoints/
-
 .DS_Store
-
-*.log
-
-.cache/
 
 credentials.json
 token.json
+
+*.sqlite3
