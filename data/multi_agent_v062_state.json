@@ -1,0 +1,14 @@
+{
+  "version": "0.6.2",
+  "status": "ready",
+  "mission_orchestrator": true,
+  "state_machine": true,
+  "persistent_state": true,
+  "planner": true,
+  "coder": true,
+  "validator": true,
+  "reviewer": true,
+  "repair_loop": true,
+  "pytest": true,
+  "last_test_mission": "mission-4f77b1e14f92"
+}
