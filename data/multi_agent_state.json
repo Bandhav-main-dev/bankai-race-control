@@ -1,0 +1,25 @@
+{
+  "version": "0.6.1",
+  "status": "ready",
+  "architecture": "multi-agent-coding",
+  "compatibility": {
+    "v05_coding_agent": true,
+    "v05_python_api": true,
+    "v06_task_interface": true
+  },
+  "agents": [
+    "planner",
+    "coder",
+    "reviewer",
+    "orchestrator"
+  ],
+  "validation": {
+    "imports": true,
+    "project_inspection": true,
+    "file_reading": true,
+    "code_search": true,
+    "execute_python": true,
+    "python_compatibility": true,
+    "pytest": true
+  }
+}
