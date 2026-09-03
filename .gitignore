@@ -52,3 +52,6 @@ Thumbs.db
 *.backup
 *.swp
 *.swo
+
+# BANKAI runtime sessions
+data/sessions/

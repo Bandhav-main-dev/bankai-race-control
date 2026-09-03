@@ -16,16 +16,26 @@
   "providers": {
     "ollama": {
       "enabled": true,
-      "local": true
+      "local": true,
+      "configured": true
     },
     "anthropic": {
-      "enabled": false
+      "enabled": false,
+      "local": false,
+      "configured": false,
+      "credential": null
     },
     "openai": {
-      "enabled": false
+      "enabled": false,
+      "local": false,
+      "configured": false,
+      "credential": null
     },
     "google": {
-      "enabled": false
+      "enabled": false,
+      "local": false,
+      "configured": false,
+      "credential": null
     }
   },
   "routing": {
@@ -38,5 +48,13 @@
     "version": "ruflo v3.38.21",
     "doctor": "PASS",
     "cli": "/usr/bin/ruflo"
+  },
+  "bankai": {
+    "v05": {
+      "status": "READY",
+      "multi_ai_engine": "READY",
+      "context_handoff": "READY",
+      "ruflo_routing_bridge": "READY"
+    }
   }
 }

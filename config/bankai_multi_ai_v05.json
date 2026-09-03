@@ -1,0 +1,43 @@
+{
+  "version": "0.5.0",
+  "architecture": {
+    "orchestrator": "ruflo",
+    "local_runtime": "ollama",
+    "conversation_engine": "bankai",
+    "context_handoff": true
+  },
+  "routing": {
+    "strategy": "ruflo_first_local_fallback",
+    "handoff_threshold_percent": 85
+  },
+  "providers": {
+    "ollama": {
+      "enabled": true,
+      "local": true,
+      "models": [
+        "qwen3:latest"
+      ]
+    },
+    "anthropic": {
+      "enabled": false,
+      "models": [
+        "claude-sonnet-4-5",
+        "claude-haiku-4-5"
+      ]
+    },
+    "openai": {
+      "enabled": false,
+      "models": [
+        "gpt-5",
+        "gpt-5-mini"
+      ]
+    },
+    "google": {
+      "enabled": false,
+      "models": [
+        "gemini-2.5-flash",
+        "gemini-2.5-pro"
+      ]
+    }
+  }
+}
