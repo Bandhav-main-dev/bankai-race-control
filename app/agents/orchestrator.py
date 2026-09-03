@@ -1,4 +1,3 @@
-
 """
 BANKAI RACE CONTROL — V0.6.2 Agent Orchestrator.
 
@@ -11,15 +10,16 @@ Future versions can attach Ruflo routing and autonomous repair.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
 import json
 import subprocess
 import sys
 import uuid
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
+from app.agents.validator import AutomaticValidator
 
 MISSION_STATES = (
     "created",
@@ -87,17 +87,13 @@ class AgentOrchestrator:
         state_file: str | Path | None = None,
     ) -> None:
         self.project = (
-            Path(project).resolve()
-            if project is not None
-            else Path.cwd().resolve()
+            Path(project).resolve() if project is not None else Path.cwd().resolve()
         )
 
         self.state_file = (
             Path(state_file)
             if state_file is not None
-            else self.project
-            / "data"
-            / "multi_agent_mission_state.json"
+            else self.project / "data" / "multi_agent_mission_state.json"
         )
 
         self.state_file.parent.mkdir(
@@ -236,6 +232,7 @@ class AgentOrchestrator:
                 cwd=self.project,
                 capture_output=True,
                 text=True,
+                check=False,
                 timeout=300,
             )
 
@@ -252,11 +249,7 @@ class AgentOrchestrator:
                 "passed": False,
                 "returncode": -1,
                 "command": command,
-                "stdout": (
-                    exc.stdout[-10000:]
-                    if isinstance(exc.stdout, str)
-                    else ""
-                ),
+                "stdout": (exc.stdout[-10000:] if isinstance(exc.stdout, str) else ""),
                 "stderr": "Validation timed out.",
             }
 
@@ -352,9 +345,7 @@ class AgentOrchestrator:
 
     def complete(self, mission: Mission) -> Mission:
         if mission.phase != "approved":
-            raise RuntimeError(
-                "Mission cannot be completed before approval."
-            )
+            raise RuntimeError("Mission cannot be completed before approval.")
 
         mission.transition("completed")
         self.save_state()
@@ -387,10 +378,7 @@ class AgentOrchestrator:
         if run_validation:
             validation = self.validate(mission)
 
-            while (
-                not validation["passed"]
-                and mission.repair_attempts < max_repairs
-            ):
+            while not validation["passed"] and mission.repair_attempts < max_repairs:
                 self.repair(
                     mission,
                     reason=validation["stderr"]
@@ -403,9 +391,7 @@ class AgentOrchestrator:
                 self.prepare_coding(
                     mission,
                     title=f"Repair attempt {mission.repair_attempts}",
-                    description=(
-                        "Repair implementation after validation failure."
-                    ),
+                    description=("Repair implementation after validation failure."),
                 )
 
                 validation = self.validate(mission)
@@ -425,10 +411,7 @@ class AgentOrchestrator:
             validation_passed=(
                 True
                 if not run_validation
-                else bool(
-                    mission.validation
-                    and mission.validation.get("passed")
-                )
+                else bool(mission.validation and mission.validation.get("passed"))
             ),
         )
 
@@ -460,9 +443,7 @@ class AgentOrchestrator:
         if not self.state_file.exists():
             return self.missions
 
-        payload = json.loads(
-            self.state_file.read_text(encoding="utf-8")
-        )
+        payload = json.loads(self.state_file.read_text(encoding="utf-8"))
 
         for mission_id, data in payload.get("missions", {}).items():
             self.missions[mission_id] = Mission(**data)
@@ -474,9 +455,7 @@ class AgentOrchestrator:
             self.load_state()
 
         if mission_id not in self.missions:
-            raise KeyError(
-                f"Mission not found: {mission_id}"
-            )
+            raise KeyError(f"Mission not found: {mission_id}")
 
         return self.missions[mission_id]
 
@@ -484,6 +463,7 @@ class AgentOrchestrator:
 # =============================================================================
 # BANKAI V0.6.3 — PLANNER → CODER INTEGRATION
 # =============================================================================
+
 
 def _bankai_plan_to_coder(self, mission):
     """
@@ -493,30 +473,21 @@ def _bankai_plan_to_coder(self, mission):
     The Coder receives that exact plan.
     """
 
-    from app.agents.planner import PlannerAgent
-
     from app.agents.coding_agent import CodingAgent
+    from app.agents.planner import PlannerAgent
 
     if mission.phase == "created":
         self.plan(mission)
 
-    planner = PlannerAgent(
-        project=str(self.project)
-    )
+    planner = PlannerAgent(project=str(self.project))
 
-    plan = planner.create_plan(
-        mission.objective
-    )
+    plan = planner.create_plan(mission.objective)
 
     mission.plan = plan.to_dict()
 
-    coder = CodingAgent(
-        self.project
-    )
+    coder = CodingAgent(self.project)
 
-    implementation = coder.prepare_from_plan(
-        plan
-    )
+    implementation = coder.prepare_from_plan(plan)
 
     mission.transition(
         "coding",
@@ -548,8 +519,6 @@ if not hasattr(AgentOrchestrator, "planner_to_coder"):
 # V0.6.4 — CODER → REVIEWER ORCHESTRATION
 # =============================================================================
 
-import json as _v064_json
-
 
 def _v064_coder_to_reviewer(
     self,
@@ -562,9 +531,7 @@ def _v064_coder_to_reviewer(
     """
 
     if mission.plan is None:
-        raise RuntimeError(
-            "Planner output is required before Coder → Reviewer."
-        )
+        raise RuntimeError("Planner output is required before Coder → Reviewer.")
 
     # Import dynamically to preserve compatibility with the existing module.
     from app.agents.coding_agent import CodingAgent
@@ -593,8 +560,8 @@ def _v064_coder_to_reviewer(
     # Explicitly enter reviewing state if supported.
     try:
         mission.phase = "reviewing"
-    except Exception:
-        pass
+    except AttributeError:
+        mission.phase = "reviewing"
 
     # Reviewer consumes the actual Coder result.
     review_result = reviewer.review_implementation(
@@ -611,7 +578,7 @@ def _v064_coder_to_reviewer(
             mission.phase = "approved"
         else:
             mission.phase = "failed"
-    except Exception:
+    except AttributeError:
         pass
 
     # Add history if the Mission model exposes it.
@@ -640,6 +607,7 @@ if not hasattr(AgentOrchestrator, "coder_to_reviewer"):
 # BANKAI V0.6.4 — FINAL CODER → REVIEWER ORCHESTRATOR REPAIR
 # =============================================================================
 
+
 def _bankai_v064_review_result_dict(review_result):
     """
     Serialize the project's existing ReviewResult schema.
@@ -656,18 +624,10 @@ def _bankai_v064_review_result_dict(review_result):
         return review_result.to_dict()
 
     return {
-        "approved": bool(
-            review_result.approved
-        ),
-        "score": int(
-            review_result.score
-        ),
-        "findings": list(
-            review_result.findings
-        ),
-        "status": str(
-            review_result.status
-        ),
+        "approved": bool(review_result.approved),
+        "score": int(review_result.score),
+        "findings": list(review_result.findings),
+        "status": str(review_result.status),
     }
 
 
@@ -689,9 +649,7 @@ def _bankai_v064_coder_to_reviewer_final(
     # -------------------------------------------------------------------------
 
     if mission.plan is None:
-        raise RuntimeError(
-            "Coder → Reviewer requires planner output."
-        )
+        raise RuntimeError("Coder → Reviewer requires planner output.")
 
     planned_steps = list(
         getattr(
@@ -703,9 +661,7 @@ def _bankai_v064_coder_to_reviewer_final(
     )
 
     if not planned_steps:
-        raise RuntimeError(
-            "Planner produced zero implementation steps."
-        )
+        raise RuntimeError("Planner produced zero implementation steps.")
 
     # -------------------------------------------------------------------------
     # AGENTS
@@ -724,20 +680,15 @@ def _bankai_v064_coder_to_reviewer_final(
     # CODER
     # -------------------------------------------------------------------------
 
-    implementation_result = (
-        coder.create_implementation_result(
-            mission.plan,
-            status="prepared",
-            validation_evidence=[
-                "Planner output validated.",
-                "Structured Coder result generated.",
-                "Coder → Reviewer contract validated.",
-            ],
-            notes=(
-                "V0.6.4 structured "
-                "Coder → Reviewer handoff."
-            ),
-        )
+    implementation_result = coder.create_implementation_result(
+        mission.plan,
+        status="prepared",
+        validation_evidence=[
+            "Planner output validated.",
+            "Structured Coder result generated.",
+            "Coder → Reviewer contract validated.",
+        ],
+        notes=("V0.6.4 structured Coder → Reviewer handoff."),
     )
 
     # -------------------------------------------------------------------------
@@ -748,9 +699,7 @@ def _bankai_v064_coder_to_reviewer_final(
         implementation_result,
         "to_dict",
     ):
-        implementation_dict = (
-            implementation_result.to_dict()
-        )
+        implementation_dict = implementation_result.to_dict()
     else:
         implementation_dict = {
             "objective": getattr(
@@ -847,9 +796,7 @@ def _bankai_v064_coder_to_reviewer_final(
             {
                 "phase": "reviewing",
                 "status": "started",
-                "timestamp": datetime.now(
-                    timezone.utc
-                ).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
@@ -857,21 +804,17 @@ def _bankai_v064_coder_to_reviewer_final(
     # REVIEWER
     # -------------------------------------------------------------------------
 
-    review_result = (
-        reviewer.review_implementation(
-            mission.plan,
-            implementation_result,
-            validation_passed=validation_passed,
-        )
+    review_result = reviewer.review_implementation(
+        mission.plan,
+        implementation_result,
+        validation_passed=validation_passed,
     )
 
     if not isinstance(
         review_result,
         ReviewResult,
     ):
-        raise RuntimeError(
-            "Reviewer returned an invalid ReviewResult."
-        )
+        raise TypeError("Reviewer returned an invalid ReviewResult.")
 
     # -------------------------------------------------------------------------
     # CRITICAL FIX
@@ -883,11 +826,7 @@ def _bankai_v064_coder_to_reviewer_final(
     # The real ReviewResult schema has no to_dict().
     # -------------------------------------------------------------------------
 
-    mission.review = (
-        _bankai_v064_review_result_dict(
-            review_result
-        )
-    )
+    mission.review = _bankai_v064_review_result_dict(review_result)
 
     # -------------------------------------------------------------------------
     # STATE TRANSITION
@@ -906,15 +845,9 @@ def _bankai_v064_coder_to_reviewer_final(
             {
                 "phase": "coder_to_reviewer",
                 "status": review_result.status,
-                "approved": bool(
-                    review_result.approved
-                ),
-                "score": int(
-                    review_result.score
-                ),
-                "timestamp": datetime.now(
-                    timezone.utc
-                ).isoformat(),
+                "approved": bool(review_result.approved),
+                "score": int(review_result.score),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
@@ -935,7 +868,207 @@ def _bankai_v064_coder_to_reviewer_final(
 # AUTHORITATIVE METHOD ASSIGNMENT
 # =============================================================================
 
-AgentOrchestrator.coder_to_reviewer = (
-    _bankai_v064_coder_to_reviewer_final
-)
+AgentOrchestrator.coder_to_reviewer = _bankai_v064_coder_to_reviewer_final
 
+
+# =============================================================================
+# BANKAI V0.6.5 — AUTOMATIC VALIDATION
+# =============================================================================
+
+
+def _bankai_v065_validate_implementation(
+    self,
+    mission,
+    implementation=None,
+    run_pytest=True,
+    run_ruff=True,
+):
+    """
+    V0.6.5 automatic validation gate.
+
+    Planner → Coder output is validated before Reviewer.
+    """
+
+    validator = AutomaticValidator(
+        self.project if hasattr(self, "project") else Path.cwd()
+    )
+
+    if implementation is None:
+        implementation = getattr(
+            mission,
+            "implementation",
+            None,
+        )
+
+    result = validator.validate(
+        implementation=implementation,
+        run_pytest=run_pytest,
+        run_ruff=run_ruff,
+    )
+
+    mission.validation = result.to_dict()
+
+    if result.passed:
+        mission.phase = "validated"
+    else:
+        mission.phase = "repairing"
+
+    history = getattr(
+        mission,
+        "history",
+        None,
+    )
+
+    if isinstance(history, list):
+        history.append(
+            {
+                "phase": mission.phase,
+                "event": "automatic_validation",
+                "validation": result.to_dict(),
+                "timestamp": result.created_at,
+            }
+        )
+
+    if hasattr(self, "save_state"):
+        self.save_state()
+
+    return result
+
+
+def _bankai_v065_validate_and_route(
+    self,
+    mission,
+    implementation=None,
+):
+    """
+    Validation routing:
+
+        PASS → Reviewer
+        FAIL → Repair
+    """
+
+    result = _bankai_v065_validate_implementation(
+        self,
+        mission,
+        implementation=implementation,
+        run_pytest=True,
+        run_ruff=True,
+    )
+
+    if result.passed:
+        mission.phase = "reviewing"
+
+        if hasattr(self, "save_state"):
+            self.save_state()
+
+        return {
+            "route": "reviewer",
+            "validation": result.to_dict(),
+        }
+
+    mission.phase = "repairing"
+
+    if hasattr(self, "save_state"):
+        self.save_state()
+
+    return {
+        "route": "repair",
+        "validation": result.to_dict(),
+    }
+
+
+AgentOrchestrator.validate_implementation = _bankai_v065_validate_implementation
+
+AgentOrchestrator.validate_and_route = _bankai_v065_validate_and_route
+
+
+# =============================================================================
+# BANKAI V0.6.5 — TARGETED VALIDATION HANDOFF
+# =============================================================================
+
+
+def _bankai_v065_validate_implementation(
+    self,
+    mission,
+    implementation=None,
+):
+    """
+    V0.6.5 authoritative validation entry point.
+
+    Preserves the existing validator implementation while ensuring Ruff
+    receives the current ImplementationResult and therefore validates only
+    affected files.
+    """
+
+    from app.agents.validator import AutomaticValidator
+
+    if implementation is None:
+        implementation = getattr(
+            mission,
+            "implementation",
+            None,
+        )
+
+    validator = getattr(
+        self,
+        "validator",
+        None,
+    )
+
+    if validator is None:
+        validator = AutomaticValidator(self.project)
+
+    original_validate_ruff = getattr(
+        validator,
+        "validate_ruff",
+        None,
+    )
+
+    targeted = AutomaticValidator.validate_ruff
+
+    def _targeted_with_implementation():
+        return targeted(
+            validator,
+            implementation,
+        )
+
+    try:
+        validator.validate_ruff = _targeted_with_implementation
+
+        # Use the existing validator's public validation method when
+        # available. This preserves all V0.6.5 checks.
+        validate_method = getattr(
+            validator,
+            "validate",
+            None,
+        )
+
+        if validate_method is None:
+            raise AttributeError("AutomaticValidator.validate() is unavailable.")
+
+        try:
+            result = validate_method(
+                implementation=implementation,
+            )
+        except TypeError:
+            try:
+                result = validate_method(
+                    implementation,
+                )
+            except TypeError:
+                result = validate_method()
+
+        return result
+
+    finally:
+        if original_validate_ruff is not None:
+            validator.validate_ruff = original_validate_ruff
+        else:
+            try:
+                del validator.validate_ruff
+            except AttributeError:
+                pass
+
+
+# Authoritative V0.6.5 validation entry point.
+AgentOrchestrator.validate_implementation = _bankai_v065_validate_implementation
