@@ -255,3 +255,62 @@ __all__ = [
     "CodingAgent",
     "CodingTask",
 ]
+
+
+# =============================================================================
+# BANKAI V0.6.3 — PLANNER → CODER COMPATIBILITY EXTENSION
+# =============================================================================
+
+def _bankai_prepare_from_plan(self, implementation_plan):
+    """
+    Convert a Planner ImplementationPlan/dict into a CodingTask-compatible
+    preparation payload.
+
+    This does not mutate project files. Actual mutation remains a separate
+    operation for later autonomous-coding milestones.
+    """
+
+    if hasattr(implementation_plan, "to_dict"):
+        plan = implementation_plan.to_dict()
+    elif isinstance(implementation_plan, dict):
+        plan = dict(implementation_plan)
+    else:
+        raise TypeError(
+            "implementation_plan must be a dict or provide to_dict()."
+        )
+
+    objective = plan.get("objective", "").strip()
+
+    if not objective:
+        raise ValueError(
+            "Implementation plan must contain an objective."
+        )
+
+    steps = plan.get("implementation_steps", [])
+
+    return {
+        "status": "ready",
+        "agent": "coder",
+        "objective": objective,
+        "analysis": plan.get("analysis", ""),
+        "files_to_modify": list(
+            plan.get("files_to_modify", [])
+        ),
+        "files_to_create": list(
+            plan.get("files_to_create", [])
+        ),
+        "implementation_steps": list(steps),
+        "validation_steps": list(
+            plan.get("validation_steps", [])
+        ),
+        "risks": list(
+            plan.get("risks", [])
+        ),
+        "constraints": list(
+            plan.get("constraints", [])
+        ),
+    }
+
+
+if not hasattr(CodingAgent, "prepare_from_plan"):
+    CodingAgent.prepare_from_plan = _bankai_prepare_from_plan

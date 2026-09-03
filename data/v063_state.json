@@ -1,0 +1,11 @@
+{
+  "version": "0.6.3",
+  "status": "ready",
+  "planner": true,
+  "structured_plan": true,
+  "coder": true,
+  "planner_to_coder": true,
+  "handoff_integrity": true,
+  "persistent_state": true,
+  "mission_recovery": true
+}

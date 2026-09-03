@@ -1,86 +1,99 @@
 
 """
-BANKAI RACE CONTROL — Planner Agent
-V0.6.1
+BANKAI RACE CONTROL — V0.6.3 Planning Models.
+
+The Planner produces a structured implementation plan which can be consumed
+directly by the Coding Agent and persisted for later validation/review.
 """
 
-from dataclasses import dataclass, field
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 
 @dataclass
-class PlanStep:
-    """One step in an implementation plan."""
+class ImplementationPlan:
+    objective: str
+    analysis: str
+    files_to_modify: list[str] = field(default_factory=list)
+    files_to_create: list[str] = field(default_factory=list)
+    implementation_steps: list[str] = field(default_factory=list)
+    validation_steps: list[str] = field(default_factory=list)
+    risks: list[str] = field(default_factory=list)
+    constraints: list[str] = field(default_factory=list)
+    created_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
-    step_id: int
-    title: str
-    description: str
-    tools: list[str] = field(default_factory=list)
-    status: str = "pending"
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict[str, Any],
+    ) -> "ImplementationPlan":
+        return cls(**data)
 
 
 class PlannerAgent:
     """
-    Converts a coding mission into an ordered implementation plan.
+    V0.6.3 Planner.
 
-    V0.6.1 intentionally keeps planning deterministic.
-    LLM/Ruflo-driven planning will be connected in later milestones.
+    Keeps planning deterministic and structured.
+    Future versions can connect this layer to Ruflo/model routing.
     """
 
-    name = "planner"
-    role = "planning"
+    def __init__(
+        self,
+        project: str | None = None,
+    ) -> None:
+        self.project = project
 
-    def create_plan(self, mission: str) -> dict[str, Any]:
-        """Create a safe initial implementation plan."""
+    def create_plan(
+        self,
+        objective: str,
+    ) -> ImplementationPlan:
+        if not objective or not objective.strip():
+            raise ValueError("Planning objective cannot be empty.")
 
-        if not mission or not mission.strip():
-            raise ValueError("Mission cannot be empty.")
+        objective = objective.strip()
 
-        mission = mission.strip()
-
-        steps = [
-            PlanStep(
-                step_id=1,
-                title="Understand mission",
-                description=f"Analyze the requested task: {mission}",
+        return ImplementationPlan(
+            objective=objective,
+            analysis=(
+                "Analyze the requested mission, identify implementation "
+                "targets, execute the required changes, and validate the "
+                "result without modifying unrelated project components."
             ),
-            PlanStep(
-                step_id=2,
-                title="Inspect project",
-                description="Inspect relevant project files and existing architecture.",
-                tools=["filesystem", "search"],
-            ),
-            PlanStep(
-                step_id=3,
-                title="Implement changes",
-                description="Implement the smallest safe change required by the mission.",
-                tools=["filesystem"],
-            ),
-            PlanStep(
-                step_id=4,
-                title="Validate implementation",
-                description="Run appropriate tests and validation checks.",
-                tools=["terminal"],
-            ),
-            PlanStep(
-                step_id=5,
-                title="Review result",
-                description="Review the implementation for correctness and regressions.",
-            ),
-        ]
-
-        return {
-            "agent": self.name,
-            "mission": mission,
-            "steps": [
-                {
-                    "step_id": step.step_id,
-                    "title": step.title,
-                    "description": step.description,
-                    "tools": step.tools,
-                    "status": step.status,
-                }
-                for step in steps
+            files_to_modify=[],
+            files_to_create=[],
+            implementation_steps=[
+                "Analyze the existing project structure.",
+                "Identify the minimum required implementation changes.",
+                "Implement the requested functionality.",
+                "Preserve existing public APIs and compatibility.",
             ],
-            "status": "planned",
-        }
+            validation_steps=[
+                "Run targeted validation.",
+                "Run the project test suite.",
+                "Verify the implementation result.",
+            ],
+            risks=[
+                "Existing APIs must remain backward compatible.",
+                "Unrelated files must not be modified.",
+            ],
+            constraints=[
+                "Do not automatically commit or push Git changes.",
+                "Do not expose secrets.",
+                "Keep changes scoped to the mission.",
+            ],
+        )
+
+    def plan(
+        self,
+        objective: str,
+    ) -> dict[str, Any]:
+        return self.create_plan(objective).to_dict()

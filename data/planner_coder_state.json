@@ -1,0 +1,61 @@
+{
+  "version": "0.6.3",
+  "mission_id": "mission-25fe30071cc4",
+  "plan": {
+    "objective": "Implement a safe Planner to Coder handoff for BANKAI Race Control.",
+    "analysis": "Analyze the requested mission, identify implementation targets, execute the required changes, and validate the result without modifying unrelated project components.",
+    "files_to_modify": [],
+    "files_to_create": [],
+    "implementation_steps": [
+      "Analyze the existing project structure.",
+      "Identify the minimum required implementation changes.",
+      "Implement the requested functionality.",
+      "Preserve existing public APIs and compatibility."
+    ],
+    "validation_steps": [
+      "Run targeted validation.",
+      "Run the project test suite.",
+      "Verify the implementation result."
+    ],
+    "risks": [
+      "Existing APIs must remain backward compatible.",
+      "Unrelated files must not be modified."
+    ],
+    "constraints": [
+      "Do not automatically commit or push Git changes.",
+      "Do not expose secrets.",
+      "Keep changes scoped to the mission."
+    ],
+    "created_at": "2026-09-03T17:00:14.396996+00:00"
+  },
+  "implementation": {
+    "status": "ready",
+    "agent": "coder",
+    "objective": "Implement a safe Planner to Coder handoff for BANKAI Race Control.",
+    "analysis": "Analyze the requested mission, identify implementation targets, execute the required changes, and validate the result without modifying unrelated project components.",
+    "files_to_modify": [],
+    "files_to_create": [],
+    "implementation_steps": [
+      "Analyze the existing project structure.",
+      "Identify the minimum required implementation changes.",
+      "Implement the requested functionality.",
+      "Preserve existing public APIs and compatibility."
+    ],
+    "validation_steps": [
+      "Run targeted validation.",
+      "Run the project test suite.",
+      "Verify the implementation result."
+    ],
+    "risks": [
+      "Existing APIs must remain backward compatible.",
+      "Unrelated files must not be modified."
+    ],
+    "constraints": [
+      "Do not automatically commit or push Git changes.",
+      "Do not expose secrets.",
+      "Keep changes scoped to the mission."
+    ]
+  },
+  "phase": "implemented",
+  "saved_at": "2026-09-03T17:00:14.406429+00:00"
+}

@@ -1,80 +1,83 @@
 {
   "version": "0.6.2",
-  "saved_at": "2026-09-03T16:58:18.507658+00:00",
+  "saved_at": "2026-09-03T17:00:14.397302+00:00",
   "missions": {
-    "mission-4f77b1e14f92": {
-      "mission_id": "mission-4f77b1e14f92",
-      "objective": "Validate the V0.6.2 multi-agent orchestration system.",
-      "phase": "completed",
-      "created_at": "2026-09-03T16:58:18.463750+00:00",
-      "updated_at": "2026-09-03T16:58:18.507643+00:00",
+    "mission-25fe30071cc4": {
+      "mission_id": "mission-25fe30071cc4",
+      "objective": "Implement a safe Planner to Coder handoff for BANKAI Race Control.",
+      "phase": "implemented",
+      "created_at": "2026-09-03T17:00:14.393972+00:00",
+      "updated_at": "2026-09-03T17:00:14.397291+00:00",
       "plan": {
-        "status": "planned",
-        "objective": "Validate the V0.6.2 multi-agent orchestration system.",
-        "steps": [
-          {
-            "step": 1,
-            "agent": "planner",
-            "action": "analyze mission"
-          },
-          {
-            "step": 2,
-            "agent": "coder",
-            "action": "implement changes"
-          },
-          {
-            "step": 3,
-            "agent": "validator",
-            "action": "run validation"
-          },
-          {
-            "step": 4,
-            "agent": "reviewer",
-            "action": "review implementation"
-          },
-          {
-            "step": 5,
-            "agent": "orchestrator",
-            "action": "complete mission"
-          }
-        ]
+        "objective": "Implement a safe Planner to Coder handoff for BANKAI Race Control.",
+        "analysis": "Analyze the requested mission, identify implementation targets, execute the required changes, and validate the result without modifying unrelated project components.",
+        "files_to_modify": [],
+        "files_to_create": [],
+        "implementation_steps": [
+          "Analyze the existing project structure.",
+          "Identify the minimum required implementation changes.",
+          "Implement the requested functionality.",
+          "Preserve existing public APIs and compatibility."
+        ],
+        "validation_steps": [
+          "Run targeted validation.",
+          "Run the project test suite.",
+          "Verify the implementation result."
+        ],
+        "risks": [
+          "Existing APIs must remain backward compatible.",
+          "Unrelated files must not be modified."
+        ],
+        "constraints": [
+          "Do not automatically commit or push Git changes.",
+          "Do not expose secrets.",
+          "Keep changes scoped to the mission."
+        ],
+        "created_at": "2026-09-03T17:00:14.396996+00:00"
       },
       "implementation": {
         "status": "ready",
         "agent": "coder",
-        "title": "V0.6.2 Orchestrator",
-        "description": "Implement and validate the agent orchestrator.",
-        "files": []
-      },
-      "validation": {
-        "passed": true,
-        "returncode": 0,
-        "command": [
-          "/usr/bin/python3",
-          "-c",
-          "print('BANKAI V0.6.2 VALIDATION PASS')"
+        "objective": "Implement a safe Planner to Coder handoff for BANKAI Race Control.",
+        "analysis": "Analyze the requested mission, identify implementation targets, execute the required changes, and validate the result without modifying unrelated project components.",
+        "files_to_modify": [],
+        "files_to_create": [],
+        "implementation_steps": [
+          "Analyze the existing project structure.",
+          "Identify the minimum required implementation changes.",
+          "Implement the requested functionality.",
+          "Preserve existing public APIs and compatibility."
         ],
-        "stdout": "BANKAI V0.6.2 VALIDATION PASS\n",
-        "stderr": ""
+        "validation_steps": [
+          "Run targeted validation.",
+          "Run the project test suite.",
+          "Verify the implementation result."
+        ],
+        "risks": [
+          "Existing APIs must remain backward compatible.",
+          "Unrelated files must not be modified."
+        ],
+        "constraints": [
+          "Do not automatically commit or push Git changes.",
+          "Do not expose secrets.",
+          "Keep changes scoped to the mission."
+        ]
       },
-      "review": {
-        "approved": true,
-        "status": "approved",
-        "reason": "Implementation passed validation."
-      },
+      "validation": null,
+      "review": null,
       "history": [
         {
-          "timestamp": "2026-09-03T16:58:18.463750+00:00",
+          "timestamp": "2026-09-03T17:00:14.393972+00:00",
           "from": null,
           "to": "created"
         },
         {
-          "timestamp": "2026-09-03T16:58:18.464178+00:00",
+          "timestamp": "2026-09-03T17:00:14.394627+00:00",
           "from": "created",
           "to": "planning"
         },
         {
-          "timestamp": "2026-09-03T16:58:18.464195+00:00",
+          "timestamp": "2026-09-03T17:00:14.394653+00:00",
           "from": "planning",
           "to": "planned",
           "metadata": {
@@ -82,37 +85,21 @@
           }
         },
         {
-          "timestamp": "2026-09-03T16:58:18.464801+00:00",
+          "timestamp": "2026-09-03T17:00:14.397257+00:00",
           "from": "planned",
-          "to": "coding"
-        },
-        {
-          "timestamp": "2026-09-03T16:58:18.464816+00:00",
-          "from": "coding",
-          "to": "implemented"
-        },
-        {
-          "timestamp": "2026-09-03T16:58:18.465293+00:00",
-          "from": "implemented",
-          "to": "validating"
-        },
-        {
-          "timestamp": "2026-09-03T16:58:18.506129+00:00",
-          "from": "validating",
-          "to": "reviewing",
+          "to": "coding",
           "metadata": {
-            "validation": "passed"
+            "planner": "completed",
+            "coder": "received_plan"
           }
         },
         {
-          "timestamp": "2026-09-03T16:58:18.506987+00:00",
-          "from": "reviewing",
-          "to": "approved"
-        },
-        {
-          "timestamp": "2026-09-03T16:58:18.507643+00:00",
-          "from": "approved",
-          "to": "completed"
+          "timestamp": "2026-09-03T17:00:14.397291+00:00",
+          "from": "coding",
+          "to": "implemented",
+          "metadata": {
+            "planner_to_coder": true
+          }
         }
       ],
       "repair_attempts": 0

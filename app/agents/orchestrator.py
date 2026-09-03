@@ -479,3 +479,66 @@ class AgentOrchestrator:
             )
 
         return self.missions[mission_id]
+
+
+# =============================================================================
+# BANKAI V0.6.3 — PLANNER → CODER INTEGRATION
+# =============================================================================
+
+def _bankai_plan_to_coder(self, mission):
+    """
+    Execute the V0.6.3 Planner → Coder handoff.
+
+    The Planner generates the structured plan.
+    The Coder receives that exact plan.
+    """
+
+    from app.agents.planner import PlannerAgent
+
+    from app.agents.coding_agent import CodingAgent
+
+    if mission.phase == "created":
+        self.plan(mission)
+
+    planner = PlannerAgent(
+        project=str(self.project)
+    )
+
+    plan = planner.create_plan(
+        mission.objective
+    )
+
+    mission.plan = plan.to_dict()
+
+    coder = CodingAgent(
+        self.project
+    )
+
+    implementation = coder.prepare_from_plan(
+        plan
+    )
+
+    mission.transition(
+        "coding",
+        planner="completed",
+        coder="received_plan",
+    )
+
+    mission.implementation = implementation
+
+    mission.transition(
+        "implemented",
+        planner_to_coder=True,
+    )
+
+    self.save_state()
+
+    return {
+        "status": "handoff_complete",
+        "plan": mission.plan,
+        "implementation": mission.implementation,
+    }
+
+
+if not hasattr(AgentOrchestrator, "planner_to_coder"):
+    AgentOrchestrator.planner_to_coder = _bankai_plan_to_coder
