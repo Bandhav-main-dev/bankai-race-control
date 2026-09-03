@@ -1,0 +1,54 @@
+# ============================================================
+# BANKAI RACE CONTROL
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+
+# Logs
+*.log
+data/logs/
+
+# Local runtime state
+*.pid
+*.tmp
+
+# Local secrets
+.env
+.env.*
+*.local.env
+
+# Ruflo / local AI secrets
+config/ruflo.local.env
+config/omniroute.local.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.bak
+*.backup
+*.swp
+*.swo
