@@ -314,3 +314,127 @@ def _bankai_prepare_from_plan(self, implementation_plan):
 
 if not hasattr(CodingAgent, "prepare_from_plan"):
     CodingAgent.prepare_from_plan = _bankai_prepare_from_plan
+
+
+# =============================================================================
+# V0.6.4 — STRUCTURED CODER OUTPUT
+# =============================================================================
+
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any
+
+
+@dataclass
+class ImplementationResult:
+    """
+    Structured result produced by the Coding Agent.
+
+    V0.6.4 intentionally describes the implementation handoff without
+    pretending that autonomous file mutation has already occurred.
+    """
+
+    objective: str
+    status: str = "prepared"
+    files_modified: list[str] = field(default_factory=list)
+    files_created: list[str] = field(default_factory=list)
+    implementation_steps_completed: list[str] = field(default_factory=list)
+    implementation_steps_remaining: list[str] = field(default_factory=list)
+    validation_evidence: list[str] = field(default_factory=list)
+    risks: list[str] = field(default_factory=list)
+    constraints: list[str] = field(default_factory=list)
+    notes: str = ""
+    created_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "objective": self.objective,
+            "status": self.status,
+            "files_modified": list(self.files_modified),
+            "files_created": list(self.files_created),
+            "implementation_steps_completed": list(
+                self.implementation_steps_completed
+            ),
+            "implementation_steps_remaining": list(
+                self.implementation_steps_remaining
+            ),
+            "validation_evidence": list(self.validation_evidence),
+            "risks": list(self.risks),
+            "constraints": list(self.constraints),
+            "notes": self.notes,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ImplementationResult":
+        return cls(
+            objective=str(data.get("objective", "")),
+            status=str(data.get("status", "prepared")),
+            files_modified=list(data.get("files_modified", [])),
+            files_created=list(data.get("files_created", [])),
+            implementation_steps_completed=list(
+                data.get("implementation_steps_completed", [])
+            ),
+            implementation_steps_remaining=list(
+                data.get("implementation_steps_remaining", [])
+            ),
+            validation_evidence=list(data.get("validation_evidence", [])),
+            risks=list(data.get("risks", [])),
+            constraints=list(data.get("constraints", [])),
+            notes=str(data.get("notes", "")),
+            created_at=str(
+                data.get(
+                    "created_at",
+                    datetime.now(timezone.utc).isoformat(),
+                )
+            ),
+        )
+
+
+def _v064_create_implementation_result(
+    self,
+    implementation_plan,
+    *,
+    status: str = "prepared",
+    files_modified: list[str] | None = None,
+    files_created: list[str] | None = None,
+    validation_evidence: list[str] | None = None,
+    notes: str = "",
+):
+    """
+    Convert the structured Planner output into a structured Coder result.
+    """
+
+    if hasattr(implementation_plan, "to_dict"):
+        plan = implementation_plan.to_dict()
+    elif isinstance(implementation_plan, dict):
+        plan = dict(implementation_plan)
+    else:
+        raise TypeError(
+            "implementation_plan must be an ImplementationPlan or dict"
+        )
+
+    steps = list(plan.get("implementation_steps", []))
+
+    return ImplementationResult(
+        objective=str(plan.get("objective", "")),
+        status=status,
+        files_modified=list(files_modified or plan.get("files_to_modify", [])),
+        files_created=list(files_created or plan.get("files_to_create", [])),
+        implementation_steps_completed=steps if status in {
+            "prepared",
+            "implemented",
+            "completed",
+        } else [],
+        implementation_steps_remaining=[],
+        validation_evidence=list(validation_evidence or []),
+        risks=list(plan.get("risks", [])),
+        constraints=list(plan.get("constraints", [])),
+        notes=notes,
+    )
+
+
+if not hasattr(CodingAgent, "create_implementation_result"):
+    CodingAgent.create_implementation_result = _v064_create_implementation_result
