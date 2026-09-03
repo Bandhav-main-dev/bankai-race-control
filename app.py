@@ -87,10 +87,22 @@ selected_project = next(
 
 status['selected_project'] = selected_name
 
+
+# -----------------------------------------------------------------------------
+# RACE MODE SAFETY
+# -----------------------------------------------------------------------------
+
+if status.get("mode") not in modes:
+    status["mode"] = modes[0]
+
 selected_mode = st.sidebar.selectbox(
     '⚙️ RACE MODE',
     modes,
-    index=modes.index(status.get('mode', modes[0]))
+    index=(
+        modes.index(status.get("mode"))
+        if status.get("mode") in modes
+        else 0
+    )
 )
 
 if selected_mode != status.get('mode'):
