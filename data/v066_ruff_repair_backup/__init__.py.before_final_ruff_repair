@@ -15,8 +15,6 @@ __all__ = [
     "AutomaticValidator",
     "CodingAgent",
     "PlannerAgent",
-    "RepairAgent",
-    "RepairResult",
     "ReviewerAgent",
     "ValidationCheck",
     "ValidationResult",

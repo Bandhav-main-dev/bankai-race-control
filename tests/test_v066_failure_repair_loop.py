@@ -1,0 +1,210 @@
+"""
+BANKAI RACE CONTROL V0.6.6 tests.
+
+Tests the structured failure → repair loop.
+"""
+
+from pathlib import Path
+
+from app.agents.orchestrator import AgentOrchestrator
+from app.agents.repair_agent import RepairAgent, RepairResult
+from app.agents.validator import ValidationResult
+
+PROJECT = Path("/content/BANKAI-RACE-CONTROL")
+
+
+def test_repair_agent_creation():
+    agent = RepairAgent(
+        max_attempts=3
+    )
+
+    assert agent.max_attempts == 3
+    assert agent.can_repair(1)
+    assert agent.can_repair(3)
+    assert not agent.can_repair(4)
+
+
+def test_repair_result_creation():
+    agent = RepairAgent(
+        max_attempts=3
+    )
+
+    validation = ValidationResult(
+        passed=False,
+        score=50,
+        checks=[],
+        errors=["pytest failed"],
+        status="failed",
+    )
+
+    result = agent.create_repair(
+        mission_id="test-mission",
+        validation_result=validation,
+        attempt=1,
+    )
+
+    assert isinstance(
+        result,
+        RepairResult,
+    )
+
+    assert result.status == "repairing"
+    assert result.attempt == 1
+    assert result.mission_id == "test-mission"
+    assert result.repair_id.startswith("repair-")
+
+
+def test_max_repair_attempts():
+    agent = RepairAgent(
+        max_attempts=2
+    )
+
+    validation = ValidationResult(
+        passed=False,
+        score=0,
+        checks=[],
+        errors=["validation failed"],
+        status="failed",
+    )
+
+    result = agent.create_repair(
+        mission_id="mission-limit",
+        validation_result=validation,
+        attempt=3,
+    )
+
+    assert (
+        result.status
+        == "max_attempts_exceeded"
+    )
+
+
+def test_repair_result_roundtrip():
+    agent = RepairAgent(
+        max_attempts=3
+    )
+
+    validation = ValidationResult(
+        passed=False,
+        score=50,
+        checks=[],
+        errors=["ruff failed"],
+        status="failed",
+    )
+
+    result = agent.create_repair(
+        mission_id="roundtrip",
+        validation_result=validation,
+        attempt=1,
+    )
+
+    restored = RepairResult.from_dict(
+        result.to_dict()
+    )
+
+    assert restored.repair_id == result.repair_id
+    assert restored.mission_id == result.mission_id
+    assert restored.attempt == result.attempt
+    assert restored.status == result.status
+
+
+def test_orchestrator_repair_cycle():
+    orchestrator = AgentOrchestrator(
+        project=str(PROJECT)
+    )
+
+    orchestrator.set_max_repair_attempts(3)
+
+    mission = orchestrator.create_mission(
+        "Repair a failed BANKAI validation"
+    )
+
+    validation = ValidationResult(
+        passed=False,
+        score=50,
+        checks=[],
+        errors=["pytest failed"],
+        status="failed",
+    )
+
+    result = orchestrator.begin_repair(
+        mission,
+        validation,
+    )
+
+    assert isinstance(
+        result,
+        RepairResult,
+    )
+
+    assert result.status == "repairing"
+    assert mission.repair_attempts == 1
+    assert mission.phase == "repairing"
+
+
+def test_repair_to_coder():
+    orchestrator = AgentOrchestrator(
+        project=str(PROJECT)
+    )
+
+    orchestrator.set_max_repair_attempts(3)
+
+    mission = orchestrator.create_mission(
+        "Repair BANKAI validation"
+    )
+
+    validation = ValidationResult(
+        passed=False,
+        score=25,
+        checks=[],
+        errors=["ruff failed"],
+        status="failed",
+    )
+
+    repair = orchestrator.begin_repair(
+        mission,
+        validation,
+    )
+
+    implementation = (
+        orchestrator.repair_to_coder(
+            mission,
+            repair,
+        )
+    )
+
+    assert implementation is not None
+    assert mission.phase == "coding"
+
+
+def test_repair_history():
+    orchestrator = AgentOrchestrator(
+        project=str(PROJECT)
+    )
+
+    mission = orchestrator.create_mission(
+        "Test repair history"
+    )
+
+    validation = ValidationResult(
+        passed=False,
+        score=0,
+        checks=[],
+        errors=["validation failed"],
+        status="failed",
+    )
+
+    repair = orchestrator.begin_repair(
+        mission,
+        validation,
+    )
+
+    assert mission.history
+    assert (
+        mission.history[-1]["event"]
+        == "repair_started"
+    )
+    assert (
+        mission.history[-1]["repair_id"]
+        == repair.repair_id
+    )

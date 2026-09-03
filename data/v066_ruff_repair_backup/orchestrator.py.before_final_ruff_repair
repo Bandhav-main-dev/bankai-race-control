@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.agents.repair_agent import RepairAgent, RepairResult
 from app.agents.validator import AutomaticValidator
 
 MISSION_STATES = (

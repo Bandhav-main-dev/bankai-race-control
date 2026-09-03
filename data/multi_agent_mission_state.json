@@ -1,102 +1,22 @@
 {
   "version": "0.6.2",
-  "saved_at": "2026-09-03T17:06:39.375183+00:00",
+  "saved_at": "2026-09-03T17:25:14.832912+00:00",
   "missions": {
-    "mission-1e18f566f884": {
-      "mission_id": "mission-1e18f566f884",
-      "objective": "Validate the structured Coder to Reviewer pipeline for BANKAI Race Control.",
-      "phase": "approved",
-      "created_at": "2026-09-03T17:06:39.374101+00:00",
-      "updated_at": "2026-09-03T17:06:39.374126+00:00",
-      "plan": {
-        "objective": "Validate the structured Coder to Reviewer pipeline for BANKAI Race Control.",
-        "analysis": "Analyze the requested mission, identify implementation targets, execute the required changes, and validate the result without modifying unrelated project components.",
-        "files_to_modify": [],
-        "files_to_create": [],
-        "implementation_steps": [
-          "Analyze the existing project structure.",
-          "Identify the minimum required implementation changes.",
-          "Implement the requested functionality.",
-          "Preserve existing public APIs and compatibility."
-        ],
-        "validation_steps": [
-          "Run targeted validation.",
-          "Run the project test suite.",
-          "Verify the implementation result."
-        ],
-        "risks": [
-          "Existing APIs must remain backward compatible.",
-          "Unrelated files must not be modified."
-        ],
-        "constraints": [
-          "Do not automatically commit or push Git changes.",
-          "Do not expose secrets.",
-          "Keep changes scoped to the mission."
-        ],
-        "created_at": "2026-09-03T17:06:39.371138+00:00"
-      },
-      "implementation": {
-        "objective": "Validate the structured Coder to Reviewer pipeline for BANKAI Race Control.",
-        "status": "prepared",
-        "files_modified": [],
-        "files_created": [],
-        "implementation_steps_completed": [
-          "Analyze the existing project structure.",
-          "Identify the minimum required implementation changes.",
-          "Implement the requested functionality.",
-          "Preserve existing public APIs and compatibility."
-        ],
-        "implementation_steps_remaining": [],
-        "validation_evidence": [
-          "Planner output validated.",
-          "Structured Coder result generated.",
-          "Coder \u2192 Reviewer contract validated."
-        ],
-        "risks": [
-          "Existing APIs must remain backward compatible.",
-          "Unrelated files must not be modified."
-        ],
-        "constraints": [
-          "Do not automatically commit or push Git changes.",
-          "Do not expose secrets.",
-          "Keep changes scoped to the mission."
-        ],
-        "notes": "V0.6.4 structured Coder \u2192 Reviewer handoff.",
-        "created_at": "2026-09-03T17:06:39.375093+00:00"
-      },
+    "mission-c90b6d0f5e1c": {
+      "mission_id": "mission-c90b6d0f5e1c",
+      "objective": "Test repair history",
+      "phase": "created",
+      "created_at": "2026-09-03T17:25:14.832898+00:00",
+      "updated_at": "2026-09-03T17:25:14.832907+00:00",
+      "plan": null,
+      "implementation": null,
       "validation": null,
-      "review": {
-        "approved": true,
-        "score": 100,
-        "findings": [
-          "[PASS] Implementation plan received.",
-          "[PASS] Implementation result received.",
-          "[PASS] Objective alignment confirmed.",
-          "[PASS] All planned implementation steps completed.",
-          "[PASS] File scope is within planned scope.",
-          "[PASS] Validation evidence present.",
-          "[PASS] Risks/constraints reviewed.",
-          "[PASS] Implementation status is reviewable."
-        ],
-        "status": "approved"
-      },
+      "review": null,
       "history": [
         {
-          "timestamp": "2026-09-03T17:06:39.374101+00:00",
+          "timestamp": "2026-09-03T17:25:14.832898+00:00",
           "from": null,
           "to": "created"
-        },
-        {
-          "phase": "reviewing",
-          "status": "started",
-          "timestamp": "2026-09-03T17:06:39.375125+00:00"
-        },
-        {
-          "phase": "coder_to_reviewer",
-          "status": "approved",
-          "approved": true,
-          "score": 100,
-          "timestamp": "2026-09-03T17:06:39.375173+00:00"
         }
       ],
       "repair_attempts": 0
