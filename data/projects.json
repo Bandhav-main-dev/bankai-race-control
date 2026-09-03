@@ -1,69 +1,68 @@
-
 [
-    {
-        "name": "Einstein AI V2",
-        "type": "AI RESEARCH",
-        "description": "Cognitive AI system inspired by Einstein's scientific reasoning.",
-        "progress": 82,
-        "status": "ACTIVE",
-        "phase": "Reasoning Engine",
-        "lap": "18/24",
-        "tests": "PASS",
-        "next": "Reasoning Engine"
-    },
-    {
-        "name": "Patrick Jane AI",
-        "type": "NEURAL NETWORK",
-        "description": "Experimental behavioral reasoning and observation AI.",
-        "progress": 25,
-        "status": "RESEARCH",
-        "phase": "Dataset Architecture",
-        "lap": "07/24",
-        "tests": "PENDING",
-        "next": "Dataset Design"
-    },
-    {
-        "name": "PickWise",
-        "type": "WEB / ML",
-        "description": "Product intelligence and recommendation project.",
-        "progress": 61,
-        "status": "ACTIVE",
-        "phase": "Model Engineering",
-        "lap": "14/24",
-        "tests": "PASS",
-        "next": "Model Evaluation"
-    },
-    {
-        "name": "Django Projects",
-        "type": "WEB DEVELOPMENT",
-        "description": "Collection of Django applications and experiments.",
-        "progress": 55,
-        "status": "ACTIVE",
-        "phase": "Implementation",
-        "lap": "11/24",
-        "tests": "PASS",
-        "next": "Feature Development"
-    },
-    {
-        "name": "Android Lab",
-        "type": "ANDROID",
-        "description": "Android application experiments and academic projects.",
-        "progress": 40,
-        "status": "PAUSED",
-        "phase": "Implementation",
-        "lap": "09/24",
-        "tests": "PENDING",
-        "next": "Activity Integration"
-    },
-    {
-        "name": "ML Experiments",
-        "type": "MACHINE LEARNING",
-        "description": "Machine learning experiments, datasets and model research.",
-        "progress": 48,
-        "status": "RESEARCH",
-        "phase": "Experimentation",
-        "lap": "10/24",
-        "tests": "PASS",
-        "next": "Model Comparison"
-    }
+  {
+    "name": "Einstein AI V2",
+    "type": "AI RESEARCH",
+    "description": "Cognitive AI system inspired by Einstein's scientific reasoning.",
+    "progress": 82,
+    "status": "ACTIVE",
+    "phase": "Reasoning Engine",
+    "lap": "18/24",
+    "tests": "PASS",
+    "next": "Reasoning Engine"
+  },
+  {
+    "name": "Patrick Jane AI",
+    "type": "NEURAL NETWORK",
+    "description": "Experimental behavioral reasoning and observation AI.",
+    "progress": 25,
+    "status": "RESEARCH",
+    "phase": "Dataset Architecture",
+    "lap": "07/24",
+    "tests": "PENDING",
+    "next": "Dataset Design"
+  },
+  {
+    "name": "PickWise",
+    "type": "WEB / ML",
+    "description": "Product intelligence and recommendation project.",
+    "progress": 61,
+    "status": "ACTIVE",
+    "phase": "Model Engineering",
+    "lap": "14/24",
+    "tests": "PASS",
+    "next": "Model Evaluation"
+  },
+  {
+    "name": "Django Projects",
+    "type": "WEB DEVELOPMENT",
+    "description": "Collection of Django applications and experiments.",
+    "progress": 55,
+    "status": "ACTIVE",
+    "phase": "Implementation",
+    "lap": "11/24",
+    "tests": "PASS",
+    "next": "Feature Development"
+  },
+  {
+    "name": "Android Lab",
+    "type": "ANDROID",
+    "description": "Android application experiments and academic projects.",
+    "progress": 40,
+    "status": "PAUSED",
+    "phase": "Implementation",
+    "lap": "09/24",
+    "tests": "PENDING",
+    "next": "Activity Integration"
+  },
+  {
+    "name": "ML Experiments",
+    "type": "MACHINE LEARNING",
+    "description": "Machine learning experiments, datasets and model research.",
+    "progress": 48,
+    "status": "RESEARCH",
+    "phase": "Experimentation",
+    "lap": "10/24",
+    "tests": "PASS",
+    "next": "Model Comparison"
+  }
 ]
