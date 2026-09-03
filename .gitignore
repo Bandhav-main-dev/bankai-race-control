@@ -60,3 +60,11 @@ Thumbs.db
 
 # BANKAI runtime sessions
 data/sessions/
+data/v066_backups/
+data/v066_final_ruff_backup/
+data/v066_restore_backup/
+data/v066_ruff_repair_backup/
+data/v066_test_ruff_backup/
+data/v066_test_schema_backup/
+data/v066_uuid_fix_backup/
+
