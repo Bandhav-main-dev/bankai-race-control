@@ -8,7 +8,11 @@
     "phase": "Reasoning Engine",
     "lap": "18/24",
     "tests": "PASS",
-    "next": "Reasoning Engine"
+    "next": "Reasoning Engine",
+    "repository": "unknown",
+    "technology": "Python",
+    "priority": "MEDIUM",
+    "driver": "MAX"
   },
   {
     "name": "Patrick Jane AI",
@@ -19,7 +23,11 @@
     "phase": "Dataset Architecture",
     "lap": "07/24",
     "tests": "PENDING",
-    "next": "Dataset Design"
+    "next": "Dataset Design",
+    "repository": "unknown",
+    "technology": "Python",
+    "priority": "MEDIUM",
+    "driver": "MAX"
   },
   {
     "name": "PickWise",
@@ -30,7 +38,11 @@
     "phase": "Model Engineering",
     "lap": "14/24",
     "tests": "PASS",
-    "next": "Model Evaluation"
+    "next": "Model Evaluation",
+    "repository": "unknown",
+    "technology": "Python",
+    "priority": "MEDIUM",
+    "driver": "MAX"
   },
   {
     "name": "Django Projects",
@@ -41,7 +53,11 @@
     "phase": "Implementation",
     "lap": "11/24",
     "tests": "PASS",
-    "next": "Feature Development"
+    "next": "Feature Development",
+    "repository": "unknown",
+    "technology": "Python",
+    "priority": "MEDIUM",
+    "driver": "MAX"
   },
   {
     "name": "Android Lab",
@@ -52,7 +68,11 @@
     "phase": "Implementation",
     "lap": "09/24",
     "tests": "PENDING",
-    "next": "Activity Integration"
+    "next": "Activity Integration",
+    "repository": "unknown",
+    "technology": "Python",
+    "priority": "MEDIUM",
+    "driver": "MAX"
   },
   {
     "name": "ML Experiments",
@@ -63,6 +83,10 @@
     "phase": "Experimentation",
     "lap": "10/24",
     "tests": "PASS",
-    "next": "Model Comparison"
+    "next": "Model Comparison",
+    "repository": "unknown",
+    "technology": "Python",
+    "priority": "MEDIUM",
+    "driver": "MAX"
   }
 ]

@@ -4,10 +4,23 @@ import json
 import time
 import streamlit as st
 
-ROOT = Path(__file__).resolve().parent
-DATA = ROOT / 'data'
-PROJECTS_FILE = DATA / 'projects.json'
-STATUS_FILE = DATA / 'status.json'
+# =============================================================================
+# PROJECT ROOT
+# Works in both Streamlit Cloud and Google Colab
+# =============================================================================
+
+if "__file__" in globals():
+    ROOT = Path(__file__).resolve().parent
+else:
+    ROOT = Path("/content/bankai_race_control")
+
+DATA = ROOT / "data"
+
+PROJECTS_FILE = DATA / "projects.json"
+STATUS_FILE = DATA / "status.json"
+
+
+
 
 st.set_page_config(
     page_title='BANKAI RACE CONTROL',
