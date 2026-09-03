@@ -1,92 +1,40 @@
-[
-  {
-    "name": "Einstein AI V2",
-    "type": "AI RESEARCH",
-    "description": "Cognitive AI system inspired by Einstein's scientific reasoning.",
-    "progress": 82,
-    "status": "ACTIVE",
-    "phase": "Reasoning Engine",
-    "lap": "18/24",
-    "tests": "PASS",
-    "next": "Reasoning Engine",
-    "repository": "unknown",
-    "technology": "Python",
-    "priority": "MEDIUM",
-    "driver": "MAX"
-  },
-  {
-    "name": "Patrick Jane AI",
-    "type": "NEURAL NETWORK",
-    "description": "Experimental behavioral reasoning and observation AI.",
-    "progress": 25,
-    "status": "RESEARCH",
-    "phase": "Dataset Architecture",
-    "lap": "07/24",
-    "tests": "PENDING",
-    "next": "Dataset Design",
-    "repository": "unknown",
-    "technology": "Python",
-    "priority": "MEDIUM",
-    "driver": "MAX"
-  },
-  {
-    "name": "PickWise",
-    "type": "WEB / ML",
-    "description": "Product intelligence and recommendation project.",
-    "progress": 61,
-    "status": "ACTIVE",
-    "phase": "Model Engineering",
-    "lap": "14/24",
-    "tests": "PASS",
-    "next": "Model Evaluation",
-    "repository": "unknown",
-    "technology": "Python",
-    "priority": "MEDIUM",
-    "driver": "MAX"
-  },
-  {
-    "name": "Django Projects",
-    "type": "WEB DEVELOPMENT",
-    "description": "Collection of Django applications and experiments.",
-    "progress": 55,
-    "status": "ACTIVE",
-    "phase": "Implementation",
-    "lap": "11/24",
-    "tests": "PASS",
-    "next": "Feature Development",
-    "repository": "unknown",
-    "technology": "Python",
-    "priority": "MEDIUM",
-    "driver": "MAX"
-  },
-  {
-    "name": "Android Lab",
-    "type": "ANDROID",
-    "description": "Android application experiments and academic projects.",
-    "progress": 40,
-    "status": "PAUSED",
-    "phase": "Implementation",
-    "lap": "09/24",
-    "tests": "PENDING",
-    "next": "Activity Integration",
-    "repository": "unknown",
-    "technology": "Python",
-    "priority": "MEDIUM",
-    "driver": "MAX"
-  },
-  {
-    "name": "ML Experiments",
-    "type": "MACHINE LEARNING",
-    "description": "Machine learning experiments, datasets and model research.",
-    "progress": 48,
-    "status": "RESEARCH",
-    "phase": "Experimentation",
-    "lap": "10/24",
-    "tests": "PASS",
-    "next": "Model Comparison",
-    "repository": "unknown",
-    "technology": "Python",
-    "priority": "MEDIUM",
-    "driver": "MAX"
-  }
-]
+{
+  "projects": [
+    {
+      "name": "Einstein AI V2",
+      "repository": "Einstain-ai-brain-v2",
+      "progress": 82,
+      "status": "ACTIVE",
+      "phase": "Reasoning Engine",
+      "technology": "Python • AI • Machine Learning",
+      "priority": "CRITICAL",
+      "description": "Einstein-inspired cognitive and reasoning architecture designed to reconstruct scientific reasoning patterns.",
+      "health": "OPTIMAL",
+      "mission": "Develop and validate the reasoning engine."
+    },
+    {
+      "name": "Einstein Brain V1",
+      "repository": "Einstein_Brain_V1",
+      "progress": 67,
+      "status": "ACTIVE",
+      "phase": "Knowledge Acquisition",
+      "technology": "Python • NLP • Research",
+      "priority": "HIGH",
+      "description": "Research foundation for Einstein papers, scientific sources and knowledge reconstruction.",
+      "health": "STABLE",
+      "mission": "Expand and validate the scientific knowledge base."
+    },
+    {
+      "name": "Patrick Jane AI",
+      "repository": "patrick-jane-ai",
+      "progress": 25,
+      "status": "RESEARCH",
+      "phase": "Dataset Architecture",
+      "technology": "Python • NLP • Neural Networks",
+      "priority": "HIGH",
+      "description": "AI research system focused on observation, reasoning and behavioral inference.",
+      "health": "RESEARCH",
+      "mission": "Build the initial reasoning dataset architecture."
+    }
+  ]
+}

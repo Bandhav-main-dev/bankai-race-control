@@ -1,16 +1,13 @@
 {
   "selected_project": "Einstein AI V2",
   "mode": "🟢 GREEN FLAG",
-  "session_running": false,
-  "session_started": null,
-  "session_seconds": 0,
   "current_lap": 1,
   "target_lap": 10,
-  "lap_started": null,
-  "current_task": "Reasoning Engine",
-  "driver_message": "Ready for the next lap.",
-  "team_message": "Telemetry online.",
+  "session_seconds": 0,
+  "session_running": false,
+  "driver_message": "Einstein AI telemetry is online.",
+  "team_message": "Race Control confirms system readiness.",
   "last_radio": "TEAM → DRIVER: Telemetry online.",
   "radio_history": [],
-  "last_updated": "2026-09-03T03:37:27"
+  "last_updated": ""
 }

@@ -1,474 +1,942 @@
+
 from pathlib import Path
 from datetime import datetime
 import json
 import time
+
 import streamlit as st
 
-# =============================================================================
-# PROJECT ROOT
-# Works in both Streamlit Cloud and Google Colab
-# =============================================================================
 
-if "__file__" in globals():
-    ROOT = Path(__file__).resolve().parent
-else:
-    ROOT = Path("/content/bankai_race_control")
+# ============================================================
+# BANKAI RACE CONTROL
+# ============================================================
 
+ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 
 PROJECTS_FILE = DATA / "projects.json"
 STATUS_FILE = DATA / "status.json"
 
 
-
+# ============================================================
+# PAGE
+# ============================================================
 
 st.set_page_config(
-    page_title='BANKAI RACE CONTROL',
-    page_icon='🏁',
-    layout='wide',
-    initial_sidebar_state='expanded'
+    page_title="BANKAI RACE CONTROL",
+    page_icon="⚔️",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
+
+
+# ============================================================
+# NATIVE STREAMLIT THEME
+# ============================================================
+
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #050505;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: #070b14;
+        border-right: 1px solid #D4AF37;
+    }
+
+    .stButton > button {
+        border: 1px solid #D4AF37;
+        border-radius: 7px;
+        background-color: #080d18;
+        color: white;
+        min-height: 42px;
+    }
+
+    .stButton > button:hover {
+        border-color: #E10600;
+        color: #D4AF37;
+    }
+
+    [data-testid="stMetric"] {
+        background-color: #080d18;
+        border: 1px solid #1d3557;
+        border-radius: 8px;
+        padding: 12px;
+    }
+
+    .stProgress > div > div > div > div {
+        background-color: #E10600;
+    }
+
+    h1 {
+        color: #FFFFFF;
+    }
+
+    h2, h3 {
+        color: #D4AF37;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# DATA
+# ============================================================
+
+DEFAULT_PROJECTS = [
+    {
+        "name": "Einstein AI V2",
+        "repository": "Einstain-ai-brain-v2",
+        "progress": 82,
+        "status": "ACTIVE",
+        "phase": "Reasoning Engine",
+        "technology": "Python • AI • Machine Learning",
+        "priority": "CRITICAL",
+        "description": "Einstein-inspired AI reasoning system.",
+        "health": "OPTIMAL",
+        "mission": "Develop and validate the reasoning engine.",
+    }
+]
+
 
 def load_json(path, default):
     try:
-        if path.exists():
-            return json.loads(path.read_text(encoding='utf-8'))
-    except Exception:
-        pass
-    return default
+        if not path.exists():
+            return default
+
+        with path.open("r", encoding="utf-8") as file:
+            return json.load(file)
+
+    except (OSError, json.JSONDecodeError):
+        return default
+
 
 def save_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False),
-        encoding='utf-8'
+
+    with path.open("w", encoding="utf-8") as file:
+        json.dump(
+            data,
+            file,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+
+def get_projects():
+    data = load_json(
+        PROJECTS_FILE,
+        {"projects": DEFAULT_PROJECTS},
     )
 
-projects = load_json(PROJECTS_FILE, [])
-status = load_json(STATUS_FILE, {})
+    if isinstance(data, dict):
+        projects = data.get("projects", [])
+    elif isinstance(data, list):
+        projects = data
+    else:
+        projects = []
 
-if not projects:
-    st.error('No projects found in data/projects.json')
-    st.stop()
+    if not projects:
+        projects = DEFAULT_PROJECTS
 
-project_names = [project['name'] for project in projects]
+    return [
+        project
+        for project in projects
+        if isinstance(project, dict)
+        and project.get("name")
+    ]
 
-if status.get('selected_project') not in project_names:
-    status['selected_project'] = project_names[0]
 
-modes = [
-    '🟢 GREEN FLAG',
-    '🔴 ATTACK MODE',
-    '🟡 CAUTION',
-    '🔵 QUALIFYING',
-    '⚫ PIT MODE',
-    '⚔️ BANKAI MODE'
+projects = get_projects()
+
+project_names = [
+    project["name"]
+    for project in projects
 ]
 
-mode_descriptions = {
-    '🟢 GREEN FLAG': 'Normal development pace.',
-    '🔴 ATTACK MODE': 'Maximum priority. Push the next milestone.',
-    '🟡 CAUTION': 'Investigate failures before pushing forward.',
-    '🔵 QUALIFYING': 'Focus on performance, tests and optimization.',
-    '⚫ PIT MODE': 'Maintenance, refactoring and infrastructure.',
-    '⚔️ BANKAI MODE': 'Final-boss development mode. Full concentration.'
-}
 
-selected_name = st.sidebar.selectbox(
-    '🏎️ SELECT REPOSITORY',
-    project_names,
-    index=project_names.index(status['selected_project'])
+# ============================================================
+# STATUS
+# ============================================================
+
+status = load_json(
+    STATUS_FILE,
+    {},
 )
 
-selected_project = next(
-    project for project in projects
-    if project['name'] == selected_name
-)
+if not isinstance(status, dict):
+    status = {}
 
-status['selected_project'] = selected_name
+if status.get("selected_project") not in project_names:
+    status["selected_project"] = project_names[0]
 
-
-# -----------------------------------------------------------------------------
-# RACE MODE SAFETY
-# -----------------------------------------------------------------------------
+modes = [
+    "🟢 GREEN FLAG",
+    "🔵 QUALIFYING",
+    "🔴 ATTACK MODE",
+    "🟡 CAUTION",
+    "⚫ PIT MODE",
+    "🔵 RESEARCH MODE",
+    "⚔️ BANKAI MODE",
+]
 
 if status.get("mode") not in modes:
     status["mode"] = modes[0]
 
-selected_mode = st.sidebar.selectbox(
-    '⚙️ RACE MODE',
-    modes,
-    index=(
-        modes.index(status.get("mode"))
-        if status.get("mode") in modes
-        else 0
-    )
+status.setdefault("current_lap", 1)
+status.setdefault("target_lap", 10)
+status.setdefault("session_seconds", 0)
+status.setdefault("session_running", False)
+status.setdefault(
+    "driver_message",
+    "Telemetry online.",
 )
+status.setdefault(
+    "team_message",
+    "Race Control ready.",
+)
+status.setdefault(
+    "last_radio",
+    "TEAM → DRIVER: Telemetry online.",
+)
+status.setdefault("radio_history", [])
 
-if selected_mode != status.get('mode'):
-    status['mode'] = selected_mode
-    status['last_radio'] = f'TEAM → DRIVER: Mode changed to {selected_mode}. Push smart.'
-    status['radio_history'].append({
-        'time': datetime.now().strftime('%H:%M:%S'),
-        'channel': 'TEAM → DRIVER',
-        'message': status['last_radio']
-    })
 
-status['mode'] = selected_mode
+# ============================================================
+# PROJECT HELPERS
+# ============================================================
 
-st.sidebar.divider()
-st.sidebar.subheader('🏁 RACE CONTROL')
-st.sidebar.caption(mode_descriptions[selected_mode])
+def get_selected_project():
+    for project in projects:
+        if project["name"] == status["selected_project"]:
+            return project
 
-st.sidebar.metric('DRIVER', 'MAX')
-st.sidebar.metric('PROJECT', selected_project['name'])
-st.sidebar.metric('PROGRESS', f"{selected_project['progress']}%")
+    return projects[0]
 
-st.sidebar.divider()
-st.sidebar.caption('⚔️ BLEACH × F1 × AI')
-st.sidebar.caption('🏎️ MAX MODE ACTIVE')
 
-# -------------------------------------------------------------------------
+def change_project(name):
+    status["selected_project"] = name
+    status["last_updated"] = datetime.now().isoformat()
+
+    selected = get_selected_project()
+
+    status["last_radio"] = (
+        f"RACE CONTROL → SYSTEM: "
+        f"{selected['name']} selected for monitoring."
+    )
+
+    history = status.get("radio_history", [])
+
+    history.insert(
+        0,
+        {
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "message": status["last_radio"],
+        },
+    )
+
+    status["radio_history"] = history[:20]
+
+    save_json(
+        STATUS_FILE,
+        status,
+    )
+
+
+selected = get_selected_project()
+
+
+# ============================================================
 # HEADER
-# -------------------------------------------------------------------------
+# ============================================================
 
-st.title('🏁 BANKAI RACE CONTROL')
-st.subheader('PERSONAL AI / SOFTWARE PROJECT COMMAND CENTER')
-st.caption('⚔️ BLEACH × F1 • DRIVER: MAX • TEAM RADIO ONLINE')
+st.title("⚔️ BANKAI RACE CONTROL")
 
-header_left, header_mid, header_right = st.columns(3)
-
-with header_left:
-    st.metric('🏎️ DRIVER', 'MAX')
-
-with header_mid:
-    st.metric('⚙️ MODE', selected_mode)
-
-with header_right:
-    st.metric('🏁 STATUS', selected_project['status'])
+st.caption(
+    "AI MONITORING SYSTEM  •  BLEACH × F1 COMMAND CENTER"
+)
 
 st.divider()
 
-# -------------------------------------------------------------------------
-# MAX MESSAGE
-# -------------------------------------------------------------------------
 
-quotes = {
-    '🟢 GREEN FLAG': 'Stay focused. Build one lap at a time.',
-    '🔴 ATTACK MODE': 'Push hard, but keep the car under control.',
-    '🟡 CAUTION': 'No unnecessary risks. Find the problem first.',
-    '🔵 QUALIFYING': 'Every millisecond matters. Optimize the details.',
-    '⚫ PIT MODE': 'Reset, repair and come back stronger.',
-    '⚔️ BANKAI MODE': 'Final lap mentality. Maximum concentration.'
-}
+# ============================================================
+# TOP CONTROL
+# ============================================================
 
-st.info(f'🏎️ MAX MODE — {quotes[selected_mode]}')
+left, middle, right = st.columns(
+    [2, 2, 1]
+)
 
-# -------------------------------------------------------------------------
-# PROJECT TELEMETRY
-# -------------------------------------------------------------------------
+with left:
+    st.subheader("🏎️ RACE CONTROL")
 
-st.header('📡 PROJECT TELEMETRY')
+    st.write(
+        f"**SYSTEM:** {selected['name']}"
+    )
 
-telemetry = st.columns(4)
+with middle:
 
-with telemetry[0]:
-    st.metric('REPOSITORY', selected_project['repository'])
+    current_mode = st.selectbox(
+        "⚙️ SYSTEM MODE",
+        modes,
+        index=modes.index(status["mode"]),
+    )
 
-with telemetry[1]:
-    st.metric('PHASE', selected_project['phase'])
+    if current_mode != status["mode"]:
 
-with telemetry[2]:
-    st.metric('PRIORITY', selected_project['priority'])
+        status["mode"] = current_mode
+        status["last_updated"] = datetime.now().isoformat()
 
-with telemetry[3]:
-    st.metric('TECH STACK', selected_project['technology'])
+        if current_mode == "⚔️ BANKAI MODE":
+            status["last_radio"] = (
+                "RACE CONTROL → SYSTEM: "
+                "BANKAI SEQUENCE ACTIVATED."
+            )
+
+        save_json(
+            STATUS_FILE,
+            status,
+        )
+
+with right:
+
+    st.metric(
+        "REIATSU",
+        f"{selected.get('progress', 0)}%",
+    )
+
+
+# ============================================================
+# SIDEBAR PROJECT SELECTOR
+# ============================================================
+
+with st.sidebar:
+
+    st.title("⚔️ AI GRID")
+
+    st.caption(
+        "SELECT AN AI SYSTEM TO MONITOR"
+    )
+
+    st.divider()
+
+    for project in projects:
+
+        selected_project = (
+            project["name"]
+            == selected["name"]
+        )
+
+        if selected_project:
+            label = (
+                f"🔴 {project['name']}"
+            )
+        else:
+            label = (
+                f"⚪ {project['name']}"
+            )
+
+        if st.button(
+            label,
+            key=f"select_{project['name']}",
+            use_container_width=True,
+        ):
+            change_project(project["name"])
+            st.rerun()
+
+        st.caption(
+            f"{project.get('status', 'UNKNOWN')} "
+            f"• {project.get('progress', 0)}%"
+        )
+
+    st.divider()
+
+    st.caption("SYSTEM STATUS")
+
+    st.write("🟢 RACE CONTROL — ONLINE")
+    st.write("🔵 TELEMETRY — ONLINE")
+    st.write("⚔️ BANKAI CORE — STANDBY")
+
+
+# ============================================================
+# SELECTED PROJECT
+# ============================================================
+
+st.subheader(
+    f"🏁 {selected['name']}"
+)
+
+st.write(
+    selected.get(
+        "description",
+        "AI project under monitoring.",
+    )
+)
+
+
+# ============================================================
+# PROJECT STATUS
+# ============================================================
+
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    st.metric(
+        "STATUS",
+        selected.get("status", "UNKNOWN"),
+    )
+
+with c2:
+    st.metric(
+        "PHASE",
+        selected.get("phase", "UNKNOWN"),
+    )
+
+with c3:
+    st.metric(
+        "HEALTH",
+        selected.get("health", "UNKNOWN"),
+    )
+
+with c4:
+    st.metric(
+        "PRIORITY",
+        selected.get("priority", "MEDIUM"),
+    )
+
+
+# ============================================================
+# REIATSU
+# ============================================================
+
+st.divider()
+
+st.subheader("⚡ REIATSU / PROJECT POWER")
+
+progress = int(
+    selected.get("progress", 0)
+)
 
 st.progress(
-    min(max(selected_project['progress'], 0), 100) / 100,
-    text=f"Project Progress — {selected_project['progress']}%"
+    progress / 100
 )
+
+st.write(
+    f"**{progress}%** — project development power"
+)
+
+
+# ============================================================
+# LIVE MONITORING
+# ============================================================
 
 st.divider()
 
-# -------------------------------------------------------------------------
-# F1 TIMER CONTROL
-# -------------------------------------------------------------------------
+st.subheader("📡 LIVE MONITORING")
 
-st.header('⏱️ F1 RACE TIMER')
+m1, m2, m3, m4 = st.columns(4)
 
-timer_col1, timer_col2, timer_col3, timer_col4 = st.columns(4)
-
-session_seconds = int(status.get('session_seconds', 0))
-
-if status.get('session_running') and status.get('session_started'):
-    try:
-        started = datetime.fromisoformat(status['session_started'])
-        session_seconds += max(
-            0,
-            int((datetime.now() - started).total_seconds())
-        )
-    except Exception:
-        pass
-
-minutes = session_seconds // 60
-seconds = session_seconds % 60
-
-with timer_col1:
-    st.metric('SESSION TIME', f'{minutes:02d}:{seconds:02d}')
-
-with timer_col2:
+with m1:
     st.metric(
-        'CURRENT LAP',
-        f"{status.get('current_lap', 1)} / {status.get('target_lap', 10)}"
+        "KNOWLEDGE CORE",
+        "ONLINE",
     )
 
-with timer_col3:
-    remaining_laps = max(
-        0,
-        int(status.get('target_lap', 10)) - int(status.get('current_lap', 1))
+with m2:
+    st.metric(
+        "COGNITIVE CORE",
+        "ONLINE",
     )
-    st.metric('LAPS REMAINING', remaining_laps)
 
-with timer_col4:
-    st.metric('TASK', status.get('current_task', selected_project['phase']))
+with m3:
+    st.metric(
+        "REASONING CORE",
+        selected.get(
+            "phase",
+            "READY",
+        ),
+    )
 
-timer_buttons = st.columns(4)
+with m4:
+    st.metric(
+        "TELEMETRY",
+        "LIVE",
+    )
 
-with timer_buttons[0]:
-    if st.button('▶️ START SESSION', use_container_width=True):
-        status['session_running'] = True
-        status['session_started'] = datetime.now().isoformat(timespec='seconds')
-        status['last_radio'] = 'TEAM → DRIVER: Green flag. Session started.'
-        status['radio_history'].append({
-            'time': datetime.now().strftime('%H:%M:%S'),
-            'channel': 'TEAM → DRIVER',
-            'message': status['last_radio']
-        })
-        save_json(STATUS_FILE, status)
-        st.rerun()
 
-with timer_buttons[1]:
-    if st.button('⏸️ PAUSE', use_container_width=True):
-        if status.get('session_running') and status.get('session_started'):
-            try:
-                started = datetime.fromisoformat(status['session_started'])
-                elapsed = max(0, int((datetime.now() - started).total_seconds()))
-                status['session_seconds'] = session_seconds
-            except Exception:
-                pass
-        status['session_running'] = False
-        status['session_started'] = None
-        save_json(STATUS_FILE, status)
-        st.rerun()
+# ============================================================
+# PROJECT INFORMATION
+# ============================================================
 
-with timer_buttons[2]:
-    if st.button('🔄 RESET', use_container_width=True):
-        status['session_running'] = False
-        status['session_started'] = None
-        status['session_seconds'] = 0
-        status['current_lap'] = 1
-        save_json(STATUS_FILE, status)
-        st.rerun()
+st.divider()
 
-with timer_buttons[3]:
-    if st.button('🏁 NEXT LAP', use_container_width=True):
-        status['current_lap'] = min(
-            int(status.get('current_lap', 1)) + 1,
-            int(status.get('target_lap', 10))
+st.subheader(
+    "📋 SYSTEM INTELLIGENCE"
+)
+
+tab1, tab2, tab3 = st.tabs(
+    [
+        "PROJECT STATUS",
+        "CURRENT MISSION",
+        "SYSTEM TELEMETRY",
+    ]
+)
+
+with tab1:
+
+    st.write(
+        f"**Project:** {selected['name']}"
+    )
+
+    st.write(
+        f"**Repository:** "
+        f"{selected.get('repository', 'N/A')}"
+    )
+
+    st.write(
+        f"**Technology:** "
+        f"{selected.get('technology', 'AI')}"
+    )
+
+    st.write(
+        f"**Status:** "
+        f"{selected.get('status', 'UNKNOWN')}"
+    )
+
+    st.write(
+        f"**Current Phase:** "
+        f"{selected.get('phase', 'UNKNOWN')}"
+    )
+
+    st.write(
+        f"**Priority:** "
+        f"{selected.get('priority', 'MEDIUM')}"
+    )
+
+    st.write(
+        f"**Progress:** {progress}%"
+    )
+
+with tab2:
+
+    st.success(
+        selected.get(
+            "mission",
+            "Continue AI development.",
         )
-        status['last_radio'] = f'TEAM → DRIVER: Lap {status["current_lap"]} confirmed. Push the next sector.'
-        status['radio_history'].append({
-            'time': datetime.now().strftime('%H:%M:%S'),
-            'channel': 'TEAM → DRIVER',
-            'message': status['last_radio']
-        })
-        save_json(STATUS_FILE, status)
+    )
+
+    st.write(
+        "**NEXT OPERATION**"
+    )
+
+    st.write(
+        "Continue the current AI subsystem, "
+        "validate the next milestone and "
+        "maintain system telemetry."
+    )
+
+with tab3:
+
+    telemetry = {
+        "Subsystem": [
+            "Knowledge",
+            "Cognition",
+            "Reasoning",
+            "Monitoring",
+            "Evaluation",
+            "Race Control",
+        ],
+        "State": [
+            "ONLINE",
+            "ONLINE",
+            "ACTIVE",
+            "ONLINE",
+            "READY",
+            "ONLINE",
+        ],
+    }
+
+    st.dataframe(
+        telemetry,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+# ============================================================
+# RACE SESSION
+# ============================================================
+
+st.divider()
+
+st.subheader("🏎️ AI DEVELOPMENT SESSION")
+
+lap1, lap2, lap3 = st.columns(3)
+
+with lap1:
+
+    lap = st.number_input(
+        "CURRENT LAP",
+        min_value=1,
+        max_value=999,
+        value=int(status["current_lap"]),
+    )
+
+    if lap != status["current_lap"]:
+        status["current_lap"] = lap
+        save_json(
+            STATUS_FILE,
+            status,
+        )
+
+with lap2:
+
+    seconds = int(
+        status.get(
+            "session_seconds",
+            0,
+        )
+    )
+
+    minutes = seconds // 60
+    remaining = seconds % 60
+
+    st.metric(
+        "SESSION TIME",
+        f"{minutes:02d}:{remaining:02d}",
+    )
+
+with lap3:
+
+    if st.button(
+        "▶️ START SESSION",
+        use_container_width=True,
+    ):
+
+        status["session_running"] = True
+
+        status["last_radio"] = (
+            f"RACE CONTROL → {selected['name']}: "
+            "Development session started."
+        )
+
+        save_json(
+            STATUS_FILE,
+            status,
+        )
+
         st.rerun()
 
-if status.get('session_running'):
+
+# ============================================================
+# RADIO
+# ============================================================
+
+st.divider()
+
+st.subheader("📻 TEAM RADIO")
+
+radio1, radio2 = st.columns(2)
+
+with radio1:
+
+    driver = st.text_input(
+        "DRIVER → TEAM",
+        value=status["driver_message"],
+    )
+
+    if st.button(
+        "📡 SEND DRIVER RADIO",
+        use_container_width=True,
+    ):
+
+        message = (
+            f"DRIVER → TEAM: {driver}"
+        )
+
+        status["driver_message"] = driver
+        status["last_radio"] = message
+
+        history = status.get(
+            "radio_history",
+            [],
+        )
+
+        history.insert(
+            0,
+            {
+                "time": datetime.now().strftime(
+                    "%H:%M:%S"
+                ),
+                "message": message,
+            },
+        )
+
+        status["radio_history"] = history[:20]
+
+        save_json(
+            STATUS_FILE,
+            status,
+        )
+
+        st.success(
+            "Driver transmission sent."
+        )
+
+with radio2:
+
+    team = st.text_input(
+        "TEAM → DRIVER",
+        value=status["team_message"],
+    )
+
+    if st.button(
+        "📡 SEND TEAM RADIO",
+        use_container_width=True,
+    ):
+
+        message = (
+            f"TEAM → DRIVER: {team}"
+        )
+
+        status["team_message"] = team
+        status["last_radio"] = message
+
+        history = status.get(
+            "radio_history",
+            [],
+        )
+
+        history.insert(
+            0,
+            {
+                "time": datetime.now().strftime(
+                    "%H:%M:%S"
+                ),
+                "message": message,
+            },
+        )
+
+        status["radio_history"] = history[:20]
+
+        save_json(
+            STATUS_FILE,
+            status,
+        )
+
+        st.success(
+            "Team transmission sent."
+        )
+
+
+st.info(
+    f"📻 {status['last_radio']}"
+)
+
+
+# ============================================================
+# MOTIVATION
+# ============================================================
+
+st.divider()
+
+st.subheader("🏆 DRIVER MINDSET")
+
+messages = [
+    "No excuses. Find the limit.",
+    "Stay focused. Keep pushing.",
+    "One lap at a time.",
+    "Find the performance that is still available.",
+    "Pressure creates performance.",
+    "Keep the system clean. Keep the mind clear.",
+]
+
+message_index = (
+    progress + int(status["current_lap"])
+) % len(messages)
+
+st.info(
+    messages[message_index]
+)
+
+st.caption(
+    "Original Max-inspired motivational messages; "
+    "not presented as verified Max Verstappen quotations."
+)
+
+
+# ============================================================
+# BANKAI STATE
+# ============================================================
+
+st.divider()
+
+st.subheader("⚔️ BANKAI CORE")
+
+b1, b2, b3, b4 = st.columns(4)
+
+with b1:
+    st.metric(
+        "SHIKAI",
+        "ACTIVE",
+    )
+
+with b2:
+    st.metric(
+        "REIATSU",
+        f"{progress}%",
+    )
+
+with b3:
+    st.metric(
+        "BANKAI",
+        "READY",
+    )
+
+with b4:
+    st.metric(
+        "RACE CONTROL",
+        "ONLINE",
+    )
+
+
+# ============================================================
+# AUDIO
+# ============================================================
+
+st.divider()
+
+st.subheader("🔊 SYSTEM AUDIO")
+
+audio_dir = DATA / "audio"
+
+audio_items = [
+    (
+        "🏁 RACE START",
+        audio_dir / "race_start.wav",
+    ),
+    (
+        "⚔️ BANKAI",
+        audio_dir / "bankai.wav",
+    ),
+    (
+        "🔴 ATTACK MODE",
+        audio_dir / "attack_mode.wav",
+    ),
+    (
+        "🟡 WARNING",
+        audio_dir / "warning.wav",
+    ),
+    (
+        "📻 DRIVER RADIO",
+        audio_dir / "driver_radio.wav",
+    ),
+    (
+        "📻 TEAM RADIO",
+        audio_dir / "team_radio.wav",
+    ),
+]
+
+available = [
+    item
+    for item in audio_items
+    if item[1].exists()
+]
+
+if available:
+
+    audio_columns = st.columns(3)
+
+    for index, (name, path) in enumerate(
+        available
+    ):
+
+        with audio_columns[index % 3]:
+
+            st.caption(name)
+
+            with path.open("rb") as audio:
+                st.audio(
+                    audio.read(),
+                    format="audio/wav",
+                )
+
+else:
+
+    st.caption(
+        "Audio modules will appear here when WAV "
+        "files are added to data/audio/."
+    )
+
+
+# ============================================================
+# RADIO HISTORY
+# ============================================================
+
+st.divider()
+
+with st.expander(
+    "📻 RACE CONTROL EVENT LOG"
+):
+
+    history = status.get(
+        "radio_history",
+        [],
+    )
+
+    if history:
+
+        for event in history[:15]:
+
+            st.write(
+                f"**[{event['time']}]** "
+                f"{event['message']}"
+            )
+
+    else:
+
+        st.caption(
+            "No events recorded."
+        )
+
+
+# ============================================================
+# SESSION UPDATE
+# ============================================================
+
+if status.get("session_running"):
+
+    status["session_seconds"] = (
+        int(status.get("session_seconds", 0))
+        + 1
+    )
+
+    status["last_updated"] = (
+        datetime.now().isoformat()
+    )
+
+    save_json(
+        STATUS_FILE,
+        status,
+    )
+
     time.sleep(1)
     st.rerun()
 
-st.divider()
 
-# -------------------------------------------------------------------------
-# DRIVER / TEAM RADIO
-# -------------------------------------------------------------------------
-
-st.header('📻 DRIVER ↔ TEAM RADIO')
-
-radio_left, radio_right = st.columns(2)
-
-with radio_left:
-    st.subheader('🏎️ DRIVER → TEAM')
-
-    driver_messages = [
-        'Car feels good. Continue pushing.',
-        'Need more performance from the next phase.',
-        'Something is wrong. Check telemetry.',
-        'Ready for the next lap.',
-        'I am pushing now.',
-        'Development target completed.'
-    ]
-
-    driver_message = st.selectbox(
-        'Driver communication',
-        driver_messages,
-        key='driver_message_select'
-    )
-
-    if st.button('📡 SEND DRIVER RADIO', use_container_width=True):
-        message = f'DRIVER → TEAM: {driver_message}'
-        status['driver_message'] = driver_message
-        status['last_radio'] = message
-        status['radio_history'].append({
-            'time': datetime.now().strftime('%H:%M:%S'),
-            'channel': 'DRIVER → TEAM',
-            'message': message
-        })
-        save_json(STATUS_FILE, status)
-        st.success(message)
-
-    driver_audio = DATA / 'audio' / 'driver_radio.wav'
-    if driver_audio.exists():
-        st.audio(driver_audio.read_bytes(), format='audio/wav')
-
-with radio_right:
-    st.subheader('🧑‍💻 TEAM → DRIVER')
-
-    team_messages = [
-        'Telemetry looks good. Continue.',
-        'Push the next lap.',
-        'Box, we need maintenance.',
-        'Attack mode is confirmed.',
-        'Caution. Investigate before continuing.',
-        'Excellent work. Keep the rhythm.'
-    ]
-
-    team_message = st.selectbox(
-        'Team communication',
-        team_messages,
-        key='team_message_select'
-    )
-
-    if st.button('📡 SEND TEAM RADIO', use_container_width=True):
-        message = f'TEAM → DRIVER: {team_message}'
-        status['team_message'] = team_message
-        status['last_radio'] = message
-        status['radio_history'].append({
-            'time': datetime.now().strftime('%H:%M:%S'),
-            'channel': 'TEAM → DRIVER',
-            'message': message
-        })
-        save_json(STATUS_FILE, status)
-        st.success(message)
-
-    team_audio = DATA / 'audio' / 'team_radio.wav'
-    if team_audio.exists():
-        st.audio(team_audio.read_bytes(), format='audio/wav')
-
-st.divider()
-
-st.subheader('📻 LAST RADIO CALL')
-st.warning(status.get('last_radio', 'Radio offline.'))
-
-# -------------------------------------------------------------------------
-# RADIO HISTORY
-# -------------------------------------------------------------------------
-
-with st.expander('📜 RADIO HISTORY', expanded=False):
-    history = status.get('radio_history', [])
-
-    if not history:
-        st.caption('No radio calls yet.')
-    else:
-        for entry in reversed(history[-20:]):
-            st.write(
-                f"**{entry.get('time', '--:--:--')}** — "
-                f"{entry.get('channel', 'RADIO')} — "
-                f"{entry.get('message', '')}"
-            )
-
-# -------------------------------------------------------------------------
-# CURRENT DEVELOPMENT TASK
-# -------------------------------------------------------------------------
-
-st.divider()
-st.header('🎯 CURRENT DEVELOPMENT TARGET')
-
-task_col1, task_col2 = st.columns([3, 1])
-
-with task_col1:
-    task = st.text_input(
-        'Current task',
-        value=status.get('current_task', selected_project['phase'])
-    )
-
-with task_col2:
-    if st.button('💾 SAVE TASK', use_container_width=True):
-        status['current_task'] = task
-        status['last_updated'] = datetime.now().isoformat(timespec='seconds')
-        save_json(STATUS_FILE, status)
-        st.success('Task saved to status.json')
-
-st.info(
-    f"🏁 Current target: **{status.get('current_task', selected_project['phase'])}**"
-)
-
-# -------------------------------------------------------------------------
-# ALL PROJECTS
-# -------------------------------------------------------------------------
-
-st.divider()
-st.header('🏆 PROJECT GRID')
-
-grid = st.columns(3)
-
-for index, project in enumerate(projects):
-    with grid[index % 3]:
-        with st.container(border=True):
-            st.subheader(f"🏎️ {project['name']}")
-            st.caption(project['repository'])
-            st.progress(
-                min(max(project['progress'], 0), 100) / 100,
-                text=f"{project['progress']}%"
-            )
-
-            c1, c2 = st.columns(2)
-
-            with c1:
-                st.metric('STATUS', project['status'])
-
-            with c2:
-                st.metric('PHASE', project['phase'])
-
-            st.caption(project['technology'])
-
-# -------------------------------------------------------------------------
-# JSON STATUS VIEW
-# -------------------------------------------------------------------------
-
-st.divider()
-
-with st.expander('🗄️ LIVE STATUS.JSON', expanded=False):
-    st.json(status)
-
-# -------------------------------------------------------------------------
+# ============================================================
 # FOOTER
-# -------------------------------------------------------------------------
+# ============================================================
 
 st.divider()
-footer1, footer2, footer3 = st.columns(3)
 
-with footer1:
-    st.caption('⚔️ BANKAI RACE CONTROL')
-
-with footer2:
-    st.caption('🏎️ MAX MODE')
-
-with footer3:
-    st.caption('🏁 RACE CONTROL ONLINE')
-
-status['last_updated'] = datetime.now().isoformat(timespec='seconds')
-save_json(STATUS_FILE, status)
+st.caption(
+    "⚔️ BANKAI RACE CONTROL  •  "
+    "AI MONITORING SYSTEM  •  "
+    "TELEMETRY ONLINE"
+)
