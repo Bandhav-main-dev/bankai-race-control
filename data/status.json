@@ -5,9 +5,9 @@
   "target_lap": 10,
   "session_seconds": 0,
   "session_running": false,
-  "driver_message": "Einstein AI telemetry is online.",
-  "team_message": "Race Control confirms system readiness.",
-  "last_radio": "TEAM → DRIVER: Telemetry online.",
+  "driver_message": "Einstein AI telemetry online.",
+  "last_radio": "RACE CONTROL → SYSTEM: Telemetry online.",
   "radio_history": [],
+  "last_audio": "",
   "last_updated": ""
 }

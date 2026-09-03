@@ -6,11 +6,12 @@
       "progress": 82,
       "status": "ACTIVE",
       "phase": "Reasoning Engine",
-      "technology": "Python • AI • Machine Learning",
-      "priority": "CRITICAL",
-      "description": "Einstein-inspired cognitive and reasoning architecture designed to reconstruct scientific reasoning patterns.",
       "health": "OPTIMAL",
-      "mission": "Develop and validate the reasoning engine."
+      "priority": "CRITICAL",
+      "technology": "Python • AI • Machine Learning",
+      "description": "Einstein-inspired cognitive and reasoning architecture for scientific AI research.",
+      "mission": "Develop, test and validate the Einstein reasoning engine.",
+      "next_operation": "Continue reasoning-engine development and milestone validation."
     },
     {
       "name": "Einstein Brain V1",
@@ -18,11 +19,12 @@
       "progress": 67,
       "status": "ACTIVE",
       "phase": "Knowledge Acquisition",
-      "technology": "Python • NLP • Research",
-      "priority": "HIGH",
-      "description": "Research foundation for Einstein papers, scientific sources and knowledge reconstruction.",
       "health": "STABLE",
-      "mission": "Expand and validate the scientific knowledge base."
+      "priority": "HIGH",
+      "technology": "Python • NLP • Research",
+      "description": "Scientific knowledge reconstruction system based on Einstein's papers and related scientific sources.",
+      "mission": "Expand, validate and organize the scientific knowledge base.",
+      "next_operation": "Continue source acquisition and knowledge validation."
     },
     {
       "name": "Patrick Jane AI",
@@ -30,11 +32,12 @@
       "progress": 25,
       "status": "RESEARCH",
       "phase": "Dataset Architecture",
-      "technology": "Python • NLP • Neural Networks",
-      "priority": "HIGH",
-      "description": "AI research system focused on observation, reasoning and behavioral inference.",
       "health": "RESEARCH",
-      "mission": "Build the initial reasoning dataset architecture."
+      "priority": "HIGH",
+      "technology": "Python • NLP • Neural Networks",
+      "description": "AI research project focused on observation, reasoning and behavioral inference.",
+      "mission": "Build the foundation for observation and reasoning datasets.",
+      "next_operation": "Complete the initial dataset architecture."
     }
   ]
 }
