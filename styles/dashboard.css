@@ -1,0 +1,344 @@
+
+/* ==========================================================
+   BANKAI RACE CONTROL
+   BLEACH × F1
+   ========================================================== */
+
+:root {
+    --black: #050505;
+    --black-2: #0b0b0b;
+    --panel: #111111;
+    --panel-2: #161616;
+    --white: #f4f1ea;
+    --muted: #999999;
+    --red: #b11226;
+    --red-bright: #e21d38;
+    --blue: #164c78;
+    --gold: #c9a227;
+    --green: #3fa66b;
+    --yellow: #d6a928;
+}
+
+/* Main application */
+
+.stApp {
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(177, 18, 38, 0.15),
+            transparent 35%
+        ),
+        radial-gradient(
+            circle at bottom left,
+            rgba(22, 76, 120, 0.12),
+            transparent 35%
+        ),
+        #050505;
+}
+
+/* Main container */
+
+.block-container {
+    max-width: 1450px;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
+}
+
+/* Typography */
+
+h1, h2, h3 {
+    color: var(--white);
+    letter-spacing: 0.04em;
+}
+
+p {
+    color: var(--muted);
+}
+
+/* Header */
+
+.command-header {
+    padding: 25px;
+    border-left: 5px solid var(--red);
+    background: linear-gradient(
+        135deg,
+        #101010,
+        #070707
+    );
+    border-radius: 12px;
+    margin-bottom: 25px;
+    box-shadow:
+        0 0 30px rgba(177, 18, 38, 0.12);
+}
+
+.command-title {
+    font-size: 2.4rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: var(--white);
+}
+
+.command-subtitle {
+    margin-top: 5px;
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    color: var(--red-bright);
+}
+
+/* Section headers */
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid #292929;
+    padding-bottom: 10px;
+    margin-top: 30px;
+    margin-bottom: 18px;
+}
+
+/* Project cards */
+
+.project-card {
+    background:
+        linear-gradient(
+            145deg,
+            rgba(25,25,25,0.98),
+            rgba(8,8,8,0.98)
+        );
+    border: 1px solid #292929;
+    border-radius: 14px;
+    padding: 20px;
+    min-height: 240px;
+    margin-bottom: 15px;
+    box-shadow:
+        0 10px 35px rgba(0,0,0,0.25);
+}
+
+.project-card:hover {
+    border-color: var(--red);
+}
+
+.project-name {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: 0.06em;
+}
+
+.project-type {
+    color: var(--red-bright);
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    margin-top: 5px;
+}
+
+.project-description {
+    color: #aaaaaa;
+    margin-top: 12px;
+    min-height: 45px;
+    font-size: 0.88rem;
+}
+
+.project-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+    color: #777777;
+    font-size: 0.75rem;
+}
+
+/* Progress */
+
+.progress-track {
+    height: 8px;
+    background: #252525;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        var(--red),
+        var(--red-bright)
+    );
+    border-radius: 10px;
+}
+
+/* Telemetry */
+
+.telemetry-card {
+    background: #0d0d0d;
+    border: 1px solid #272727;
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.telemetry-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: #777777;
+}
+
+.telemetry-value {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--white);
+    margin-top: 5px;
+}
+
+/* Status */
+
+.status-active {
+    color: var(--green);
+    font-weight: 800;
+}
+
+.status-research {
+    color: var(--yellow);
+    font-weight: 800;
+}
+
+.status-paused {
+    color: #777777;
+    font-weight: 800;
+}
+
+.status-completed {
+    color: var(--gold);
+    font-weight: 800;
+}
+
+/* Reiatsu */
+
+.reiatsu-card {
+    background:
+        linear-gradient(
+            135deg,
+            #111111,
+            #090909
+        );
+    border: 1px solid #303030;
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.reiatsu-title {
+    color: var(--gold);
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    font-weight: 900;
+}
+
+.reiatsu-value {
+    color: var(--white);
+    font-size: 2rem;
+    font-weight: 900;
+}
+
+/* Race control */
+
+.race-card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(177,18,38,0.08),
+            rgba(10,10,10,0.95)
+        );
+    border: 1px solid #3a1b20;
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.race-label {
+    color: var(--red-bright);
+    letter-spacing: 0.16em;
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+
+/* Timeline */
+
+.timeline {
+    border-left: 2px solid #333333;
+    padding-left: 20px;
+}
+
+.timeline-item {
+    margin-bottom: 18px;
+    position: relative;
+}
+
+.timeline-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--red);
+    border-radius: 50%;
+    position: absolute;
+    left: -26px;
+    top: 4px;
+}
+
+.timeline-title {
+    color: var(--white);
+    font-weight: 800;
+}
+
+.timeline-description {
+    color: #777777;
+    font-size: 0.8rem;
+}
+
+/* Sidebar */
+
+[data-testid="stSidebar"] {
+    background: #080808;
+    border-right: 1px solid #222222;
+}
+
+/* Buttons */
+
+.stButton > button {
+    border-radius: 8px;
+    border: 1px solid #333333;
+    background: #111111;
+    color: var(--white);
+    font-weight: 700;
+}
+
+.stButton > button:hover {
+    border-color: var(--red);
+    color: white;
+}
+
+/* Metrics */
+
+[data-testid="stMetric"] {
+    background: #0e0e0e;
+    border: 1px solid #242424;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+/* Divider */
+
+hr {
+    border-color: #252525;
+}
+
+/* Mobile */
+
+@media (max-width: 800px) {
+
+    .command-title {
+        font-size: 1.6rem;
+    }
+
+    .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
