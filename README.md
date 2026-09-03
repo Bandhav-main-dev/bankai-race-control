@@ -1,0 +1,33 @@
+# BANKAI RACE CONTROL
+
+Agentic Local AI Coding Command Center.
+
+## Architecture
+
+USER
+↓
+RACE CONTROL
+↓
+MISSION CONTROLLER
+↓
+CODING AGENT
+↓
+LOCAL LLM
+↓
+TOOLS
+↓
+PROJECT
+
+## Agent Loop
+
+PLAN
+→ INSPECT
+→ IMPLEMENT
+→ TEST
+→ DEBUG
+→ REVIEW
+→ COMPLETE
+
+## Current Version
+
+0.1.0

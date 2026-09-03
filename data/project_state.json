@@ -1,0 +1,8 @@
+{
+  "status": "INITIALIZED",
+  "current_mission": null,
+  "current_agent": null,
+  "iteration": 0,
+  "last_command": null,
+  "last_result": null
+}

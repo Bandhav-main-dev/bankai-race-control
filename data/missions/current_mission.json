@@ -1,0 +1,17 @@
+{
+  "mission_id": "9a545e24",
+  "objective": "Initialize BANKAI coding agent",
+  "status": "CREATED",
+  "phase": "PLAN",
+  "created_at": "2026-09-03T13:44:00.813928",
+  "steps": [
+    "UNDERSTAND",
+    "INSPECT",
+    "PLAN",
+    "IMPLEMENT",
+    "TEST",
+    "REVIEW",
+    "COMPLETE"
+  ],
+  "iteration": 0
+}

@@ -1,0 +1,42 @@
+{
+  "system": "BANKAI RACE CONTROL",
+  "version": "V0.4",
+  "router": {
+    "name": "Ruflo",
+    "status": "READY"
+  },
+  "ollama": {
+    "status": "READY",
+    "url": "http://127.0.0.1:11434",
+    "model": "qwen3:latest",
+    "models": [
+      "qwen3:latest"
+    ]
+  },
+  "providers": {
+    "ollama": {
+      "enabled": true,
+      "local": true
+    },
+    "anthropic": {
+      "enabled": false
+    },
+    "openai": {
+      "enabled": false
+    },
+    "google": {
+      "enabled": false
+    }
+  },
+  "routing": {
+    "automatic_selection": true,
+    "context_handoff": true,
+    "threshold_percent": 85
+  },
+  "ruflo": {
+    "status": "READY",
+    "version": "ruflo v3.38.21",
+    "doctor": "PASS",
+    "cli": "/usr/bin/ruflo"
+  }
+}

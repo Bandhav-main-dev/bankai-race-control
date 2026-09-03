@@ -1,0 +1,38 @@
+{
+  "project": {
+    "name": "BANKAI RACE CONTROL",
+    "codename": "BANKAI",
+    "version": "0.1.0",
+    "description": "Agentic Local AI Coding Command Center"
+  },
+  "agent": {
+    "mode": "agentic",
+    "planner": true,
+    "coder": true,
+    "tester": true,
+    "reviewer": true,
+    "max_iterations": 5,
+    "require_approval": true
+  },
+  "llm": {
+    "provider": "huggingface-local",
+    "model": "Qwen/Qwen3-0.6B",
+    "device": "auto",
+    "temperature": 0.2,
+    "max_tokens": 2048
+  },
+  "tools": {
+    "filesystem": true,
+    "terminal": true,
+    "python": true,
+    "git": true,
+    "testing": true,
+    "linting": true
+  },
+  "safety": {
+    "allow_shell": true,
+    "allow_file_write": true,
+    "allow_git": true,
+    "require_command_approval": true
+  }
+}

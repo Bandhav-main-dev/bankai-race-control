@@ -1,0 +1,78 @@
+{
+  "project": "/content/BANKAI-RACE-CONTROL",
+  "ruflo": {
+    "path": "/usr/bin/ruflo",
+    "version": "ruflo v3.38.21",
+    "commands": {
+      "models": {
+        "returncode": 1,
+        "available": false,
+        "help": "  Did you mean one of these?\n  - providers\n  - process\n  - progress\n[ERROR] Unknown command: models\n"
+      },
+      "providers": {
+        "returncode": 0,
+        "available": true,
+        "help": "\nruflo providers\nManage AI providers, models, and configurations\n\nSUBCOMMANDS:\n  list            List available AI providers and models\n  configure       Configure provider settings and API keys\n  test            Test provider connectivity and API access\n  models          List and manage available models\n  usage           View provider usage and costs\n\nEXAMPLES:\n  $ claude-flow providers list\n    List all providers\n  $ claude-flow providers configure -p openai\n    Configure OpenAI\n  $ claude-flow providers test --all\n    Test all providers\n\n"
+      },
+      "config": {
+        "returncode": 0,
+        "available": true,
+        "help": "\nruflo config\nConfiguration management\n\nSUBCOMMANDS:\n  init            Initialize configuration\n  get             Get configuration value\n  set             Set configuration value\n  providers       Manage AI providers\n  reset           Reset configuration to defaults\n  export          Export configuration\n  import          Import configuration\n\nEXAMPLES:\n  $ claude-flow config init --v3\n    Initialize V3 config\n  $ claude-flow config get swarm.topology\n    Get config value\n  $ claude-flow config set swarm.maxAgents 20\n    Set config value\n\n"
+      },
+      "proxy": {
+        "returncode": 0,
+        "available": true,
+        "help": "\nruflo proxy\nMeta LLM Proxy \u2014 install/lifecycle + sponsored downtime + power saver + training-data sharing (ADR-304/307/313/314/315)\n\nSUBCOMMANDS:\n  install         Download, verify, and install the meta-proxy binary (ADR-307)\n  update          Re-verify and replace the installed binary with the pinned release (never automatic)\n  start           Start meta-proxy (foreground by default; --service to detach)\n  supervise       Internal detached supervisor for token refresh and meta-proxy lifecycle\n  stop            Stop a running meta-proxy process\n  status          Show meta-proxy install + process status\n  logs            Show meta-proxy --service logs\n  uninstall       Stop the proxy (if running), remove the binary, token, and consent receipt\n  config          Toggle cloud routing and its tier selection (ADR-304/321) \u2014 local backends only by default\n  sponsor-enable  Opt into Cognitum-sponsored downtime capacity (ADR-313)\n  sponsor-disable Revoke sponsored-downtime consent and stop using sponsored capacity\n  sponsor-status  Show sponsored-downtime consent + rate-limit flag state\n  sponsor-clear   Clear the rate-limited flag (your Claude limit has reset)\n  power-saver-enable Opt into power saver mode \u2014 route everyday requests through your own Cognitum account (ADR-314)\n  power-saver-disable Revoke power-saver consent and stop routing through Cognitum for cost savings\n  power-saver-status Show power-saver consent + quota-low flag state\n  power-saver-clear Clear the quota-low flag\n  training-share-enable Opt into sharing sponsored-plane interaction content for meta-llm training (ADR-315)\n  training-share-disable Revoke training-data-sharing consent \u2014 stop sending the training consent header\n  training-share-status Show training-data-sharing consent state\n\nEXAMPLES:\n  $ ruflo proxy install --yes\n    Install the signed Meta-Proxy v0.7.3 binary\n  $ ruflo proxy start\n    Start meta-proxy in the foreground\n  $ ruflo proxy status\n    Show install + process status\n  $ ruflo proxy config --cloud --yes\n    Enable cloud routing (ADR-304)\n  $ ruflo proxy config --routing-mode high\n    Pin the cloud tier instead of auto (ADR-321)\n  $ ruflo proxy config --passthrough\n    Turn cloud routing off, back to your Claude subscription\n  $ ruflo proxy config --local-only\n    Revert to local-only routing\n  $ ruflo proxy sponsor-status\n    Show current sponsored-mode state\n  $ ruflo proxy sponsor-enable --yes\n    Opt into sponsored downtime capacity\n  $ ruflo proxy power-saver-enable --yes\n    Opt into power saver mode\n  $ ruflo proxy training-share-enable --yes\n    Opt into training-data sharing (ADR-315)\n\n"
+      },
+      "agent": {
+        "returncode": 0,
+        "available": true,
+        "help": "\nruflo agent\nAgent management commands\n\nSUBCOMMANDS:\n  spawn           Spawn a new agent\n  list            List all active agents (ls)\n  status          Show detailed status of an agent\n  stop            Stop a running agent (kill)\n  metrics         Show agent performance metrics\n  pool            Manage agent pool for scaling\n  health          Show agent health and metrics\n  logs            Show agent activity logs\n  wasm-status     Check rvagent-wasm availability, version, and capabilities\n  wasm-create     Create a WASM-sandboxed agent\n  wasm-prompt     Send a prompt to a WASM agent\n  wasm-gallery    List available WASM agent gallery templates\n  publish         Publish the AGNTCY-identified, OASF-described agent record to the configured Directory (ADR-380 \u00a72)\n\nEXAMPLES:\n  $ claude-flow agent spawn -t coder\n    Spawn a coder agent\n  $ claude-flow agent list\n    List all agents\n  $ claude-flow agent status agent-001\n    Show agent status\n\n"
+      },
+      "agents": {
+        "returncode": 1,
+        "available": false,
+        "help": "  Did you mean one of these?\n  - agent\n  - announcements\n  - eject\n[ERROR] Unknown command: agents\n"
+      },
+      "chat": {
+        "returncode": 1,
+        "available": false,
+        "help": "  Did you mean one of these?\n  - start\n  - status\n  - claims\n[ERROR] Unknown command: chat\n"
+      },
+      "run": {
+        "returncode": 1,
+        "available": false,
+        "help": "  Did you mean one of these?\n  - route\n  - funnel\n  - auth\n[ERROR] Unknown command: run\n"
+      },
+      "router": {
+        "returncode": 1,
+        "available": false,
+        "help": "  Did you mean one of these?\n  - route\n  - doctor\n  - providers\n[ERROR] Unknown command: router\n"
+      },
+      "routing": {
+        "returncode": 1,
+        "available": false,
+        "help": "  Did you mean one of these?\n  - route\n  - settings\n  - config\n[ERROR] Unknown command: routing\n"
+      }
+    }
+  },
+  "providers": {
+    "Ollama": {
+      "status": "NOT CONFIGURED",
+      "key": null
+    },
+    "Anthropic / Claude": {
+      "status": "NOT CONFIGURED",
+      "key": null
+    },
+    "OpenAI / GPT": {
+      "status": "NOT CONFIGURED",
+      "key": null
+    },
+    "Google / Gemini": {
+      "status": "NOT CONFIGURED",
+      "key": null
+    }
+  },
+  "next_phase": "V0.5_REAL_RUFLO_PROVIDER_ROUTING"
+}

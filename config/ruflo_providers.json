@@ -1,0 +1,32 @@
+{
+  "system": "BANKAI RACE CONTROL",
+  "router": "Ruflo",
+  "local_provider": {
+    "name": "Ollama",
+    "enabled": true,
+    "base_url": "http://127.0.0.1:11434",
+    "model": "qwen3:latest",
+    "local_only": true
+  },
+  "remote_providers": {
+    "anthropic": {
+      "enabled": false,
+      "model": "claude-sonnet"
+    },
+    "openai": {
+      "enabled": false,
+      "model": "gpt"
+    },
+    "google": {
+      "enabled": false,
+      "model": "gemini"
+    }
+  },
+  "routing": {
+    "strategy": "adaptive",
+    "automatic_model_selection": true,
+    "context_handoff": true,
+    "token_threshold_percent": 85,
+    "preserve_conversation_state": true
+  }
+}

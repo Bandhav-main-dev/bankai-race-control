@@ -1,0 +1,14 @@
+{
+  "pytest": {
+    "enabled": true,
+    "collection_safe": true,
+    "testpaths": [
+      "tests"
+    ],
+    "timeout_seconds": 120
+  },
+  "local_ai_tests": {
+    "model_loading_during_collection": false,
+    "model_inference": "runtime_validation"
+  }
+}
