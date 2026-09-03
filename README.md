@@ -1,91 +1,35 @@
-# BANKAI RACE CONTROL
+# ⚔️ BANKAI RACE CONTROL
 
-## Personal AI Project Command Center
+## Bleach × F1 AI Monitoring Command Center
 
-Bleach x Formula 1 x AI
+Native Streamlit AI monitoring system with:
 
-Bankai Race Control is a Streamlit dashboard for managing
-and monitoring AI, ML, Django, Android, research and
-software projects.
+- Einstein AI V2 monitoring
+- Reiatsu telemetry
+- F1 race-control workflow
+- Bankai mode
+- Attack mode
+- Development laps
+- Session controls
+- Native audio cues
+- BANKAI AI chatbot
+- OmniRoute integration
+- Ollama-compatible backend
+- Persistent AI command history
 
-## Features
+## AI Architecture
 
-- Project overview
-- Project progress tracking
-- Race Control telemetry
-- Reiatsu project health
-- Zanpakuto implementation progress
-- Bankai milestone tracking
-- Task management
-- AI Lab
-- Analytics
-- GitHub project integration
-- Streamlit Community Cloud support
+```text
+BANKAI RACE CONTROL
+        |
+        v
+BANKAI AI COMMAND
+        |
+        v
+    OmniRoute
+        |
+        v
+      Ollama
+```
 
-## Project Lifecycle
-
-IDEA
-RESEARCH
-ARCHITECTURE
-IMPLEMENTATION
-TESTING
-INTEGRATION
-DEPLOYMENT
-COMPLETED
-
-## Project Structure
-
-bankai-race-control/
-|-- app.py
-|-- data/
-|   |-- projects.json
-|-- pages/
-|-- assets/
-|-- styles/
-|   |-- dashboard.css
-|-- .streamlit/
-|   |-- config.toml
-|-- requirements.txt
-|-- packages.txt
-|-- README.md
-|-- .gitignore
-
-## Run Locally
-
-pip install -r requirements.txt
-
-streamlit run app.py
-
-## Streamlit Community Cloud
-
-Repository:
-Bandhav-main-dev/bankai-race-control
-
-Branch:
-main
-
-Main file:
-app.py
-
-## Theme
-
-Bleach
-- Bankai
-- Reiatsu
-- Zanpakuto
-- Soul Society
-
-Formula 1
-- Race Control
-- Lap
-- Sector
-- Telemetry
-- Grid
-
-## Author
-
-GitHub: https://github.com/Bandhav-main-dev
-
-## Status
-
-Active Development
+The application uses native Streamlit components and does not use unsafe HTML UI injection.

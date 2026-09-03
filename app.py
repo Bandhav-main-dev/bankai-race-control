@@ -1,27 +1,15 @@
-
-from pathlib import Path
-from datetime import datetime
 import json
 import time
+from datetime import datetime
+from pathlib import Path
 
+import requests
 import streamlit as st
 
 
-# ============================================================
-# ⚔️ BANKAI RACE CONTROL
-# ============================================================
-
-ROOT = Path(__file__).resolve().parent
-DATA = ROOT / "data"
-AUDIO = DATA / "audio"
-
-PROJECTS_FILE = DATA / "projects.json"
-STATUS_FILE = DATA / "status.json"
-
-
-# ============================================================
-# PAGE CONFIG
-# ============================================================
+# ================================================================
+# BANKAI RACE CONTROL
+# ================================================================
 
 st.set_page_config(
     page_title="BANKAI RACE CONTROL",
@@ -30,1025 +18,749 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+ROOT = Path(__file__).resolve().parent
+DATA = ROOT / "data"
+AUDIO = DATA / "audio"
+PROJECTS_FILE = DATA / "projects.json"
+STATUS_FILE = DATA / "status.json"
 
-# ============================================================
-# DATA FUNCTIONS
-# ============================================================
 
-def load_json(path, default):
+# ================================================================
+# JSON
+# ================================================================
 
+def load_json(path, fallback):
     try:
-
-        if not path.exists():
-            return default
-
-        with path.open(
-            "r",
-            encoding="utf-8",
-        ) as file:
-
-            return json.load(file)
-
-    except (
-        OSError,
-        json.JSONDecodeError,
-    ):
-
-        return default
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return fallback
 
 
 def save_json(path, data):
-
-    path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
+    path.write_text(
+        json.dumps(data, indent=2),
+        encoding="utf-8"
     )
 
-    with path.open(
-        "w",
-        encoding="utf-8",
-    ) as file:
 
-        json.dump(
-            data,
-            file,
-            indent=2,
-            ensure_ascii=False,
-        )
-
-
-projects_data = load_json(
-    PROJECTS_FILE,
-    {"projects": []},
-)
-
-projects = projects_data.get(
-    "projects",
-    [],
-)
-
-if not projects:
-
-    projects = [
-        {
-            "name": "Einstein AI V2",
-            "progress": 0,
-            "status": "UNKNOWN",
-            "phase": "Unknown",
-            "health": "UNKNOWN",
-            "priority": "HIGH",
-            "technology": "AI",
-            "description": "AI monitoring target.",
-            "mission": "Continue development.",
-            "next_operation": "Continue development.",
-        }
-    ]
-
+projects = load_json(PROJECTS_FILE, [])
 
 status = load_json(
     STATUS_FILE,
-    {},
-)
-
-if not isinstance(status, dict):
-    status = {}
-
-
-# ============================================================
-# MODES
-# ============================================================
-
-MODES = [
-    "🟢 GREEN FLAG",
-    "🔵 QUALIFYING",
-    "🔴 ATTACK MODE",
-    "🟡 CAUTION",
-    "⚫ PIT MODE",
-    "🔵 RESEARCH MODE",
-    "⚔️ BANKAI MODE",
-]
-
-
-# ============================================================
-# STATUS NORMALIZATION
-# ============================================================
-
-project_names = [
-    project["name"]
-    for project in projects
-]
-
-if status.get(
-    "selected_project"
-) not in project_names:
-
-    status["selected_project"] = (
-        project_names[0]
-    )
-
-
-if status.get("mode") not in MODES:
-    status["mode"] = MODES[0]
-
-
-status.setdefault(
-    "current_lap",
-    1,
-)
-
-status.setdefault(
-    "target_lap",
-    10,
-)
-
-status.setdefault(
-    "session_seconds",
-    0,
-)
-
-status.setdefault(
-    "session_running",
-    False,
-)
-
-status.setdefault(
-    "last_radio",
-    "RACE CONTROL → SYSTEM: Telemetry online.",
-)
-
-status.setdefault(
-    "radio_history",
-    [],
-)
-
-status.setdefault(
-    "last_audio",
-    "",
+    {
+        "selected_project": "Einstein AI V2",
+        "mode": "🟢 GREEN FLAG",
+        "current_lap": 1,
+        "target_lap": 10,
+        "session_seconds": 0,
+        "session_running": False,
+        "radio_history": [],
+        "ai_messages": []
+    }
 )
 
 
-# ============================================================
-# HELPERS
-# ============================================================
+# ================================================================
+# PROJECT
+# ================================================================
 
-def selected_project():
-
+def get_project(name):
     for project in projects:
-
-        if project["name"] == status[
-            "selected_project"
-        ]:
-
+        if project.get("name") == name:
             return project
 
-    return projects[0]
+    if projects:
+        return projects[0]
+
+    return {
+        "name": "Unknown AI",
+        "status": "UNKNOWN",
+        "phase": "UNKNOWN",
+        "health": "UNKNOWN",
+        "priority": "UNKNOWN",
+        "progress": 0,
+        "technology": "Unknown",
+        "repository": "Unknown",
+        "mission": "No mission.",
+        "next_operation": "No operation."
+    }
 
 
-def update_status():
+selected_project = get_project(
+    status.get("selected_project", "Einstein AI V2")
+)
 
-    status["last_updated"] = (
-        datetime.now().isoformat()
+
+# ================================================================
+# EVENTS
+# ================================================================
+
+def log_event(message):
+    history = status.setdefault("radio_history", [])
+
+    history.insert(
+        0,
+        {
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "message": message
+        }
     )
 
-    save_json(
-        STATUS_FILE,
-        status,
-    )
+    status["radio_history"] = history[:30]
+    status["last_radio"] = message
+    status["last_updated"] = datetime.now().isoformat()
+
+    save_json(STATUS_FILE, status)
 
 
-def play_audio(
-    filename,
-    message=None,
-):
+# ================================================================
+# AUDIO
+# ================================================================
 
-    audio_path = AUDIO / filename
+def play_audio(filename, message=None):
+    path = AUDIO / filename
 
-    if audio_path.exists():
-
-        with audio_path.open("rb") as audio:
-
-            st.audio(
-                audio.read(),
-                format="audio/wav",
-            )
-
-    if message:
-
-        status["last_radio"] = message
-
-        history = status.get(
-            "radio_history",
-            [],
-        )
-
-        history.insert(
-            0,
-            {
-                "time": datetime.now().strftime(
-                    "%H:%M:%S"
-                ),
-                "message": message,
-            },
-        )
-
-        status["radio_history"] = history[:20]
+    if path.exists():
+        st.audio(str(path), format="audio/wav")
 
     status["last_audio"] = filename
 
-    update_status()
+    if message:
+        log_event(message)
+
+    save_json(STATUS_FILE, status)
 
 
-def select_project(name):
+# ================================================================
+# OMNIROUTE
+# ================================================================
 
-    status["selected_project"] = name
-
-    project = next(
-        (
-            item
-            for item in projects
-            if item["name"] == name
-        ),
-        None,
+def check_omniroute():
+    url = st.session_state.get(
+        "omniroute_url",
+        "http://localhost:20128/v1"
     )
 
-    if project:
-
-        status["last_radio"] = (
-            "RACE CONTROL → SYSTEM: "
-            f"{name} selected for monitoring."
+    try:
+        response = requests.get(
+            url.rstrip("/") + "/models",
+            timeout=2
         )
+        return response.ok
+    except Exception:
+        return False
 
-        status["radio_history"].insert(
-            0,
+
+def ask_bankai_ai(question):
+    from openai import OpenAI
+
+    base_url = st.session_state.get(
+        "omniroute_url",
+        "http://localhost:20128/v1"
+    )
+
+    model = st.session_state.get(
+        "omniroute_model",
+        "auto"
+    )
+
+    api_key = st.session_state.get(
+        "omniroute_key",
+        ""
+    ) or "omniroute"
+
+    system_prompt = (
+        "You are BANKAI AI, the AI race engineer inside "
+        "BANKAI RACE CONTROL.\n\n"
+        "Current project: " + str(selected_project.get("name")) + "\n"
+        "Status: " + str(selected_project.get("status")) + "\n"
+        "Phase: " + str(selected_project.get("phase")) + "\n"
+        "Health: " + str(selected_project.get("health")) + "\n"
+        "Priority: " + str(selected_project.get("priority")) + "\n"
+        "Progress: " + str(selected_project.get("progress")) + "%\n"
+        "Technology: " + str(selected_project.get("technology")) + "\n"
+        "Mission: " + str(selected_project.get("mission")) + "\n"
+        "Next operation: " + str(selected_project.get("next_operation")) + "\n\n"
+        "Current mode: " + str(status.get("mode")) + "\n"
+        "Current lap: " + str(status.get("current_lap")) + "/" + str(status.get("target_lap")) + "\n\n"
+        "Give practical technical recommendations. "
+        "Never invent telemetry. "
+        "Separate known facts from recommendations."
+    )
+
+    client = OpenAI(
+        base_url=base_url,
+        api_key=api_key
+    )
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
             {
-                "time": datetime.now().strftime(
-                    "%H:%M:%S"
-                ),
-                "message": status["last_radio"],
+                "role": "system",
+                "content": system_prompt
             },
-        )
+            {
+                "role": "user",
+                "content": question
+            }
+        ],
+        temperature=0.4
+    )
 
-    update_status()
+    return response.choices[0].message.content
 
 
-project = selected_project()
+# ================================================================
+# SESSION STATE
+# ================================================================
+
+if "omniroute_url" not in st.session_state:
+    st.session_state.omniroute_url = "http://localhost:20128/v1"
+
+if "omniroute_model" not in st.session_state:
+    st.session_state.omniroute_model = "auto"
+
+if "omniroute_key" not in st.session_state:
+    st.session_state.omniroute_key = ""
+
+if "last_ai_question" not in st.session_state:
+    st.session_state.last_ai_question = ""
+
+if "last_ai_response" not in st.session_state:
+    st.session_state.last_ai_response = ""
+
+if "last_tick" not in st.session_state:
+    st.session_state.last_tick = time.time()
 
 
-# ============================================================
+# ================================================================
 # HEADER
-# ============================================================
+# ================================================================
 
 st.title("⚔️ BANKAI RACE CONTROL")
 
 st.caption(
-    "AI MONITORING SYSTEM  •  "
-    "BLEACH × F1  •  "
-    "TELEMETRY COMMAND"
+    "AI MONITORING SYSTEM • BLEACH × F1 • "
+    "RACE ENGINEERING COMMAND CENTER"
 )
 
 st.divider()
 
 
-# ============================================================
-# SYSTEM HEADER
-# ============================================================
+# ================================================================
+# TOP TELEMETRY
+# ================================================================
 
-header1, header2, header3 = st.columns(
-    [2, 2, 1]
-)
+a, b, c = st.columns(3)
 
-with header1:
-
-    st.subheader(
-        "🏎️ AI RACE CONTROL"
-    )
-
-    st.write(
-        f"**MONITORING:** "
-        f"{project['name']}"
-    )
-
-with header2:
-
-    mode = st.selectbox(
-        "⚙️ OPERATING MODE",
-        MODES,
-        index=MODES.index(
-            status["mode"]
-        ),
-    )
-
-    if mode != status["mode"]:
-
-        status["mode"] = mode
-
-        if mode == "⚔️ BANKAI MODE":
-
-            play_audio(
-                "bankai.wav",
-                "⚔️ RACE CONTROL → SYSTEM: BANKAI ACTIVATED.",
-            )
-
-        elif mode == "🔴 ATTACK MODE":
-
-            play_audio(
-                "attack_mode.wav",
-                "🔴 RACE CONTROL → SYSTEM: ATTACK MODE.",
-            )
-
-        elif mode == "🟡 CAUTION":
-
-            play_audio(
-                "warning.wav",
-                "🟡 RACE CONTROL → SYSTEM: CAUTION.",
-            )
-
-        elif mode == "🔵 QUALIFYING":
-
-            play_audio(
-                "qualifying.wav",
-                "🔵 RACE CONTROL → SYSTEM: QUALIFYING.",
-            )
-
-        else:
-
-            play_audio(
-                "button.wav",
-                f"RACE CONTROL → SYSTEM: {mode}.",
-            )
-
-with header3:
-
+with a:
     st.metric(
-        "⚡ REIATSU",
-        f"{project.get('progress', 0)}%",
+        "🏎️ MONITORING",
+        selected_project.get("name", "Unknown")
+    )
+
+with b:
+    st.metric(
+        "⚔️ REIATSU",
+        f"{selected_project.get("progress", 0)}%"
+    )
+
+with c:
+    st.metric(
+        "🏁 MODE",
+        status.get("mode", "🟢 GREEN FLAG")
     )
 
 
-# ============================================================
-# SIDEBAR AI GRID
-# ============================================================
+# ================================================================
+# SIDEBAR
+# ================================================================
 
 with st.sidebar:
 
-    st.title("⚔️ AI GRID")
+    st.header("🏎️ AI GRID")
 
-    st.caption(
-        "SELECT SYSTEM TO MONITOR"
-    )
+    for project in projects:
 
-    st.divider()
+        name = project.get("name", "Unknown")
 
-    for item in projects:
+        selected = name == status.get("selected_project")
 
-        is_selected = (
-            item["name"]
-            == project["name"]
-        )
-
-        if is_selected:
-
-            label = (
-                f"🔴 {item['name']}"
-            )
-
-        else:
-
-            label = (
-                f"⚪ {item['name']}"
-            )
+        label = f"🔴 {name}" if selected else f"⚪ {name}"
 
         if st.button(
             label,
-            key=f"project_{item['name']}",
-            use_container_width=True,
+            key=f"project_{name}",
+            use_container_width=True
         ):
 
-            select_project(
-                item["name"]
+            status["selected_project"] = name
+
+            log_event(
+                f"RACE CONTROL → PROJECT SELECTED: {name}"
             )
 
-            play_audio(
-                "button.wav"
-            )
-
+            play_audio("button.wav")
             st.rerun()
-
-        st.caption(
-            f"{item.get('status', 'UNKNOWN')} "
-            f"• {item.get('progress', 0)}%"
-        )
 
     st.divider()
 
-    st.caption("RACE CONTROL")
+    st.header("📡 OMNIROUTE")
 
-    st.write("🟢 TELEMETRY ONLINE")
-    st.write("🔵 AI CORE ONLINE")
-    st.write("⚔️ BANKAI CORE READY")
-
-
-# ============================================================
-# HERO
-# ============================================================
-
-st.subheader(
-    f"🏁 {project['name']}"
-)
-
-st.write(
-    project.get(
-        "description",
-        "AI project under monitoring.",
+    st.session_state.omniroute_url = st.text_input(
+        "Endpoint",
+        value=st.session_state.omniroute_url
     )
-)
 
-st.divider()
+    st.session_state.omniroute_model = st.text_input(
+        "Model",
+        value=st.session_state.omniroute_model
+    )
+
+    st.session_state.omniroute_key = st.text_input(
+        "API Key",
+        value=st.session_state.omniroute_key,
+        type="password"
+    )
+
+    if st.button(
+        "📡 TEST OMNIROUTE",
+        use_container_width=True
+    ):
+
+        if check_omniroute():
+            st.success("🟢 OMNIROUTE ONLINE")
+            play_audio(
+                "ai.wav",
+                "RACE CONTROL → OMNIROUTE ONLINE"
+            )
+        else:
+            st.error("🔴 OMNIROUTE OFFLINE")
+            play_audio(
+                "warning.wav",
+                "RACE CONTROL → OMNIROUTE OFFLINE"
+            )
+
+    st.divider()
+
+    st.write("🧠 AI CORE — ONLINE")
+    st.write("📡 TELEMETRY — ONLINE")
+    st.write("🏎️ RACE CONTROL — READY")
 
 
-# ============================================================
+# ================================================================
 # PROJECT STATUS
-# ============================================================
+# ================================================================
 
-st.subheader(
-    "📡 PROJECT TELEMETRY"
-)
+st.subheader(f"🏁 {selected_project.get("name")}")
 
-status1, status2, status3, status4 = st.columns(
-    4
-)
+c1, c2, c3, c4 = st.columns(4)
 
-with status1:
+with c1:
+    st.metric("STATUS", selected_project.get("status", "UNKNOWN"))
 
-    st.metric(
-        "STATUS",
-        project.get(
-            "status",
-            "UNKNOWN",
-        ),
-    )
+with c2:
+    st.metric("PHASE", selected_project.get("phase", "UNKNOWN"))
 
-with status2:
+with c3:
+    st.metric("HEALTH", selected_project.get("health", "UNKNOWN"))
 
-    st.metric(
-        "PHASE",
-        project.get(
-            "phase",
-            "UNKNOWN",
-        ),
-    )
-
-with status3:
-
-    st.metric(
-        "HEALTH",
-        project.get(
-            "health",
-            "UNKNOWN",
-        ),
-    )
-
-with status4:
-
-    st.metric(
-        "PRIORITY",
-        project.get(
-            "priority",
-            "MEDIUM",
-        ),
-    )
+with c4:
+    st.metric("PRIORITY", selected_project.get("priority", "UNKNOWN"))
 
 
-# ============================================================
+# ================================================================
 # REIATSU
-# ============================================================
+# ================================================================
 
-st.divider()
+st.subheader("⚡ REIATSU / DEVELOPMENT POWER")
 
-st.subheader(
-    "⚡ REIATSU / DEVELOPMENT POWER"
-)
+progress = int(selected_project.get("progress", 0))
 
-progress = int(
-    project.get(
-        "progress",
-        0,
-    )
-)
+st.progress(max(0, min(100, progress)))
 
-st.progress(
-    progress / 100
-)
-
-st.caption(
-    f"{progress}% SYSTEM DEVELOPMENT"
-)
+st.caption(f"DEVELOPMENT POWER • {progress}%")
 
 
-# ============================================================
-# MONITORING CORES
-# ============================================================
+# ================================================================
+# AI CORE
+# ================================================================
 
-st.divider()
-
-st.subheader(
-    "🧠 AI CORE MONITORING"
-)
+st.subheader("🧠 AI CORE MONITORING")
 
 core1, core2, core3 = st.columns(3)
 
 with core1:
-
     with st.container(border=True):
-
-        st.subheader(
-            "📚 KNOWLEDGE CORE"
-        )
-
-        st.success(
-            "ONLINE"
-        )
-
-        st.caption(
-            "Scientific knowledge and data layer"
-        )
+        st.markdown("### 🔵 KNOWLEDGE CORE")
+        st.write("Scientific knowledge acquisition")
+        st.success("OPERATIONAL")
 
 with core2:
-
     with st.container(border=True):
-
-        st.subheader(
-            "🧠 COGNITIVE CORE"
-        )
-
-        st.success(
-            "ONLINE"
-        )
-
-        st.caption(
-            "Cognitive architecture monitoring"
-        )
+        st.markdown("### 🔴 COGNITIVE CORE")
+        st.write("Cognitive architecture")
+        st.info("MONITORING")
 
 with core3:
+    with st.container(border=True):
+        st.markdown("### 🟡 REASONING CORE")
+        st.write("Reasoning and decision engine")
+        st.warning("ACTIVE")
+
+
+# ================================================================
+# PROJECT INTELLIGENCE
+# ================================================================
+
+with st.expander("📊 PROJECT INTELLIGENCE", expanded=True):
+
+    left, right = st.columns(2)
+
+    with left:
+        st.write(
+            f"**Technology:** {selected_project.get("technology")}"
+        )
+        st.write(
+            f"**Repository:** {selected_project.get("repository")}"
+        )
+
+    with right:
+        st.write(
+            f"**Mission:** {selected_project.get("mission")}"
+        )
+        st.write(
+            f"**Next Operation:** {selected_project.get("next_operation")}"
+        )
+
+
+# ================================================================
+# BANKAI AI COMMAND
+# ================================================================
+
+st.divider()
+
+st.subheader("🤖 BANKAI AI COMMAND")
+
+st.caption("Ollama-compatible AI routed through OmniRoute.")
+
+ai_main, ai_info = st.columns([2, 1])
+
+with ai_main:
+
+    if st.session_state.last_ai_question:
+        st.write(
+            f"👤 **YOU:** {st.session_state.last_ai_question}"
+        )
+
+    if st.session_state.last_ai_response:
+        with st.container(border=True):
+            st.markdown("### ⚔️ BANKAI AI")
+            st.write(st.session_state.last_ai_response)
+
+    question = st.text_area(
+        "AI Command",
+        placeholder="Ask BANKAI AI about the selected AI project...",
+        height=130
+    )
+
+    send, clear = st.columns(2)
+
+    with send:
+
+        if st.button(
+            "⚡ SEND TO BANKAI AI",
+            use_container_width=True
+        ):
+
+            if question.strip():
+
+                st.session_state.last_ai_question = question.strip()
+
+                try:
+                    with st.spinner(
+                        "BANKAI AI analysing telemetry..."
+                    ):
+                        answer = ask_bankai_ai(question.strip())
+
+                    st.session_state.last_ai_response = answer
+
+                    messages = status.setdefault("ai_messages", [])
+
+                    messages.insert(
+                        0,
+                        {
+                            "time": datetime.now().strftime("%H:%M:%S"),
+                            "project": selected_project.get("name"),
+                            "question": question.strip(),
+                            "answer": answer
+                        }
+                    )
+
+                    status["ai_messages"] = messages[:20]
+
+                    save_json(STATUS_FILE, status)
+
+                    play_audio(
+                        "ai.wav",
+                        "BANKAI AI → ANALYSIS READY"
+                    )
+
+                    st.rerun()
+
+                except Exception as exc:
+                    st.error(
+                        f"AI connection error: {type(exc).__name__}: {exc}"
+                    )
+
+    with clear:
+
+        if st.button(
+            "🧹 CLEAR AI",
+            use_container_width=True
+        ):
+
+            st.session_state.last_ai_question = ""
+            st.session_state.last_ai_response = ""
+            play_audio("button.wav")
+            st.rerun()
+
+
+with ai_info:
 
     with st.container(border=True):
 
-        st.subheader(
-            "⚡ REASONING CORE"
-        )
+        st.markdown("### 📡 AI TELEMETRY")
 
-        st.info(
-            project.get(
-                "phase",
-                "READY",
-            )
-        )
+        st.write(f"**Project:** {selected_project.get("name")}")
+        st.write("**Route:** OmniRoute")
+        st.write("**Backend:** Ollama compatible")
+        st.write(f"**Model:** {st.session_state.omniroute_model}")
 
-        st.caption(
-            "Current AI reasoning subsystem"
-        )
+        if check_omniroute():
+            st.success("🟢 OMNI ONLINE")
+        else:
+            st.warning("🟡 OMNI NOT DETECTED")
 
 
-# ============================================================
-# PROJECT INTELLIGENCE
-# ============================================================
+# ================================================================
+# DEVELOPMENT SESSION
+# ================================================================
 
 st.divider()
 
-st.subheader(
-    "🔎 SYSTEM INTELLIGENCE"
-)
+st.subheader("🏎️ DEVELOPMENT SESSION")
 
-info1, info2 = st.columns(2)
-
-with info1:
-
-    st.write(
-        f"**Repository:** "
-        f"{project.get('repository', 'N/A')}"
-    )
-
-    st.write(
-        f"**Technology:** "
-        f"{project.get('technology', 'AI')}"
-    )
-
-    st.write(
-        f"**Health:** "
-        f"{project.get('health', 'UNKNOWN')}"
-    )
-
-with info2:
-
-    st.write(
-        "**CURRENT MISSION**"
-    )
-
-    st.info(
-        project.get(
-            "mission",
-            "Continue development.",
-        )
-    )
-
-    st.write(
-        "**NEXT OPERATION**"
-    )
-
-    st.warning(
-        project.get(
-            "next_operation",
-            "Continue development.",
-        )
-    )
-
-
-# ============================================================
-# SESSION CONTROL
-# ============================================================
-
-st.divider()
-
-st.subheader(
-    "🏎️ DEVELOPMENT SESSION"
-)
-
-session1, session2, session3, session4 = st.columns(
-    4
-)
-
-with session1:
-
-    st.metric(
-        "LAP",
-        f"{status['current_lap']} / "
-        f"{status['target_lap']}",
-    )
-
-with session2:
-
-    seconds = int(
-        status.get(
-            "session_seconds",
-            0,
-        )
-    )
-
-    minutes = seconds // 60
-    remaining = seconds % 60
-
-    st.metric(
-        "SESSION TIME",
-        f"{minutes:02d}:{remaining:02d}",
-    )
-
-with session3:
-
-    if status["session_running"]:
-
-        st.success(
-            "🟢 SESSION RUNNING"
-        )
-
-    else:
-
-        st.info(
-            "⚫ SESSION STOPPED"
-        )
-
-with session4:
-
-    st.metric(
-        "MODE",
-        status["mode"],
-    )
-
-
-# ============================================================
-# SESSION BUTTONS
-# ============================================================
-
-start_col, stop_col, lap_col, reset_col = st.columns(
-    4
-)
-
-with start_col:
-
-    if st.button(
-        "▶️ START SESSION",
-        use_container_width=True,
-    ):
-
-        status["session_running"] = True
-
-        play_audio(
-            "race_start.wav",
-            (
-                "RACE CONTROL → SYSTEM: "
-                f"{project['name']} development session started."
-            ),
-        )
-
-        st.rerun()
-
-
-with stop_col:
-
-    if st.button(
-        "🛑 STOP SESSION",
-        use_container_width=True,
-    ):
-
-        status["session_running"] = False
-
-        play_audio(
-            "stop.wav",
-            "RACE CONTROL → SYSTEM: DEVELOPMENT SESSION STOPPED.",
-        )
-
-        st.rerun()
-
+lap_col, timer_col, state_col = st.columns(3)
 
 with lap_col:
+    st.metric(
+        "CURRENT LAP",
+        f"{status.get("current_lap", 1)} / {status.get("target_lap", 10)}"
+    )
 
-    if st.button(
-        "🏁 NEXT LAP",
-        use_container_width=True,
-    ):
+with timer_col:
+    seconds = int(status.get("session_seconds", 0))
+    minutes = seconds // 60
+    secs = seconds % 60
+    st.metric("SESSION TIME", f"{minutes:02d}:{secs:02d}")
 
-        status["current_lap"] += 1
+with state_col:
+    if status.get("session_running", False):
+        st.metric("SESSION", "🟢 RUNNING")
+    else:
+        st.metric("SESSION", "🔴 STOPPED")
 
-        play_audio(
-            "lap.wav",
-            (
-                "RACE CONTROL → SYSTEM: "
-                f"LAP {status['current_lap']} COMPLETE."
-            ),
+
+# ================================================================
+# TIMER
+# ================================================================
+
+if status.get("session_running", False):
+
+    now = time.time()
+    elapsed = int(now - st.session_state.last_tick)
+
+    if elapsed > 0:
+        status["session_seconds"] = (
+            int(status.get("session_seconds", 0))
+            + elapsed
         )
+        save_json(STATUS_FILE, status)
 
+    st.session_state.last_tick = now
+    time.sleep(1)
+    st.rerun()
+
+else:
+    st.session_state.last_tick = time.time()
+
+
+# ================================================================
+# SESSION CONTROLS
+# ================================================================
+
+start, stop, lap, reset = st.columns(4)
+
+with start:
+    if st.button("▶️ START SESSION", use_container_width=True):
+        status["session_running"] = True
+        log_event("RACE CONTROL → SESSION STARTED")
+        play_audio("race_start.wav")
         st.rerun()
 
+with stop:
+    if st.button("🛑 STOP SESSION", use_container_width=True):
+        status["session_running"] = False
+        log_event("RACE CONTROL → SESSION STOPPED")
+        play_audio("stop.wav")
+        st.rerun()
 
-with reset_col:
+with lap:
+    if st.button("🏁 NEXT LAP", use_container_width=True):
+        current = int(status.get("current_lap", 1))
+        target = int(status.get("target_lap", 10))
+        status["current_lap"] = min(current + 1, target)
+        log_event(f"RACE CONTROL → LAP {status["current_lap"]}")
+        play_audio("lap.wav")
+        st.rerun()
 
-    if st.button(
-        "🔄 RESET",
-        use_container_width=True,
-    ):
-
+with reset:
+    if st.button("🔄 RESET", use_container_width=True):
         status["session_running"] = False
         status["session_seconds"] = 0
         status["current_lap"] = 1
-
-        play_audio(
-            "button.wav",
-            "RACE CONTROL → SYSTEM: SESSION RESET.",
-        )
-
+        log_event("RACE CONTROL → SESSION RESET")
+        play_audio("button.wav")
         st.rerun()
 
 
-# ============================================================
-# MOTIVATIONAL COMMAND
-# ============================================================
+# ================================================================
+# MODES
+# ================================================================
 
 st.divider()
+st.subheader("⚔️ RACE MODE")
 
-st.subheader(
-    "🏆 MOTIVATIONAL COMMAND"
-)
-
-motivation_left, motivation_right = st.columns(
-    [2, 1]
-)
-
-motivational_lines = [
-    (
-        "FOCUS",
-        "Keep your eyes on the target. "
-        "The next lap is the only lap that matters.",
-    ),
-    (
-        "DISCIPLINE",
-        "Build the system one verified step at a time.",
-    ),
-    (
-        "PRESSURE",
-        "When the pressure rises, precision matters more.",
-    ),
-    (
-        "LIMIT",
-        "Find the performance that is still available.",
-    ),
-    (
-        "BANKAI",
-        "Release the next level only when the foundation is ready.",
-    ),
+modes = [
+    "🟢 GREEN FLAG",
+    "🔵 QUALIFYING",
+    "🔴 ATTACK MODE",
+    "🟡 CAUTION",
+    "⚪ PIT MODE",
+    "🧠 RESEARCH MODE",
+    "⚔️ BANKAI MODE"
 ]
 
-quote_index = (
-    progress
-    + int(status["current_lap"])
-) % len(motivational_lines)
+current_mode = status.get("mode", modes[0])
 
-title, message = motivational_lines[
-    quote_index
-]
+if current_mode not in modes:
+    current_mode = modes[0]
 
-with motivation_left:
-
-    with st.container(border=True):
-
-        st.subheader(
-            f"⚔️ {title}"
-        )
-
-        st.write(
-            message
-        )
-
-        st.caption(
-            "MAX-INSPIRED ORIGINAL MOTIVATIONAL MESSAGE"
-        )
-
-with motivation_right:
-
-    st.metric(
-        "MENTAL STATE",
-        "LOCKED IN",
-    )
-
-    st.metric(
-        "MISSION",
-        "PUSH",
-    )
-
-
-# ============================================================
-# CURRENT SYSTEM MODE
-# ============================================================
-
-st.divider()
-
-st.subheader(
-    "⚙️ CURRENT SYSTEM MODE"
+new_mode = st.selectbox(
+    "Operating mode",
+    modes,
+    index=modes.index(current_mode)
 )
 
-if status["mode"] == "⚔️ BANKAI MODE":
+if new_mode != status.get("mode"):
 
-    st.success(
-        "⚔️ BANKAI MODE — SYSTEM OPERATING BEYOND NORMAL DEVELOPMENT STATE."
-    )
+    status["mode"] = new_mode
 
-elif status["mode"] == "🔴 ATTACK MODE":
-
-    st.error(
-        "🔴 ATTACK MODE — DEVELOPMENT PUSH ACTIVE."
-    )
-
-elif status["mode"] == "🟡 CAUTION":
-
-    st.warning(
-        "🟡 CAUTION — SYSTEM REQUIRES ATTENTION."
-    )
-
-elif status["mode"] == "🔵 QUALIFYING":
-
-    st.info(
-        "🔵 QUALIFYING — PERFORMANCE AND VALIDATION RUN."
-    )
-
-else:
-
-    st.info(
-        f"{status['mode']} — SYSTEM READY."
-    )
-
-
-# ============================================================
-# SYSTEM AUDIO
-# ============================================================
-
-st.divider()
-
-st.subheader(
-    "🔊 RACE CONTROL AUDIO"
-)
-
-audio_col1, audio_col2, audio_col3 = st.columns(
-    3
-)
-
-audio_buttons = [
-    (
-        audio_col1,
-        "🏁 START AUDIO",
-        "race_start.wav",
-    ),
-    (
-        audio_col2,
-        "⚔️ BANKAI AUDIO",
-        "bankai.wav",
-    ),
-    (
-        audio_col3,
-        "🔴 ATTACK AUDIO",
-        "attack_mode.wav",
-    ),
-]
-
-
-for column, label, filename in audio_buttons:
-
-    with column:
-
-        if st.button(
-            label,
-            key=f"audio_{filename}",
-            use_container_width=True,
-        ):
-
-            play_audio(
-                filename
-            )
-
-
-# ============================================================
-# LAST RADIO / EVENT
-# ============================================================
-
-st.divider()
-
-st.subheader(
-    "📻 LAST SYSTEM TRANSMISSION"
-)
-
-st.info(
-    status["last_radio"]
-)
-
-
-# ============================================================
-# EVENT LOG
-# ============================================================
-
-with st.expander(
-    "📡 RACE CONTROL EVENT LOG"
-):
-
-    history = status.get(
-        "radio_history",
-        [],
-    )
-
-    if history:
-
-        for event in history[:15]:
-
-            st.write(
-                f"**[{event['time']}]** "
-                f"{event['message']}"
-            )
-
+    if "BANKAI" in new_mode:
+        audio = "bankai.wav"
+    elif "ATTACK" in new_mode:
+        audio = "attack_mode.wav"
+    elif "CAUTION" in new_mode:
+        audio = "warning.wav"
+    elif "QUALIFYING" in new_mode:
+        audio = "qualifying.wav"
     else:
+        audio = "button.wav"
 
-        st.caption(
-            "No events recorded."
-        )
-
-
-# ============================================================
-# TIMER
-# ============================================================
-
-if status["session_running"]:
-
-    status["session_seconds"] = (
-        int(
-            status.get(
-                "session_seconds",
-                0,
-            )
-        )
-        + 1
-    )
-
-    update_status()
-
-    time.sleep(1)
-
+    log_event(f"RACE CONTROL → MODE: {new_mode}")
+    play_audio(audio)
     st.rerun()
 
 
-# ============================================================
-# FOOTER
-# ============================================================
+# ================================================================
+# MOTIVATIONAL COMMAND
+# ================================================================
 
 st.divider()
+st.subheader("🏆 MOTIVATIONAL COMMAND")
 
+motivational = [
+    ("FOCUS", "Keep your eyes on the target. The next lap is the only lap that matters."),
+    ("DISCIPLINE", "Build the system one verified step at a time."),
+    ("PRESSURE", "When pressure rises, precision matters more."),
+    ("LIMIT", "Find the performance that is still available."),
+    ("BANKAI", "Release the next level only when the foundation is ready.")
+]
+
+focus, message = motivational[
+    (int(status.get("current_lap", 1)) - 1) % len(motivational)
+]
+
+with st.container(border=True):
+    st.markdown(f"### ⚔️ {focus}")
+    st.write(f"**{message}**")
+    st.caption("MAX-INSPIRED ORIGINAL MOTIVATIONAL MESSAGE")
+    st.write("MENTAL STATE: 🔒 LOCKED IN")
+    st.write("MISSION: 🏎️ PUSH")
+
+
+# ================================================================
+# EVENT LOG
+# ================================================================
+
+st.divider()
+st.subheader("📡 LAST SYSTEM TRANSMISSION")
+st.info(status.get("last_radio", "RACE CONTROL → SYSTEM ONLINE"))
+
+with st.expander("📻 RACE CONTROL EVENT LOG"):
+    history = status.get("radio_history", [])
+
+    if history:
+        for event in history[:20]:
+            st.write(
+                f"`{event.get("time", "--:--:--")}` {event.get("message", "")}"
+            )
+    else:
+        st.caption("No events recorded.")
+
+
+# ================================================================
+# AI HISTORY
+# ================================================================
+
+with st.expander("🧠 AI COMMAND HISTORY"):
+
+    ai_history = status.get("ai_messages", [])
+
+    if ai_history:
+
+        for item in ai_history[:10]:
+            st.write(
+                f"`{item.get("time", "--:--:--")}` {item.get("project", "AI")}"
+            )
+            st.write(f"👤 {item.get("question", "")}")
+            st.write(f"🤖 {item.get("answer", "")}")
+            st.divider()
+
+    else:
+        st.caption("No AI commands recorded.")
+
+
+# ================================================================
+# FOOTER
+# ================================================================
+
+st.divider()
 st.caption(
-    "⚔️ BANKAI RACE CONTROL  •  "
-    "AI MONITORING SYSTEM  •  "
-    "EINSTEIN AI  •  "
-    "TELEMETRY ONLINE"
+    "⚔️ BANKAI RACE CONTROL • AI MONITORING • "
+    "BLEACH × F1 • OLLAMA / OMNIROUTE"
 )
