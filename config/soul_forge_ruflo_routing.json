@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "product": "SOUL FORGE",
+  "orchestrator": "ruflo",
+  "gateway": "openrouter",
+  "openrouter": {
+    "base_url": "https://openrouter.ai/api/v1",
+    "fallback_models": [
+      "anthropic/claude-sonnet-4.5",
+      "openai/gpt-5",
+      "google/gemini-2.5-flash"
+    ]
+  },
+  "local_fallback": {
+    "provider": "ollama",
+    "base_url": "http://127.0.0.1:11434",
+    "model": "qwen3:latest"
+  },
+  "workflow": {
+    "UNDERSTAND": {
+      "route": "openrouter",
+      "model": "anthropic/claude-sonnet-4.5"
+    },
+    "PLAN": {
+      "route": "openrouter",
+      "model": "openai/gpt-5"
+    },
+    "IMPLEMENT": {
+      "route": "openrouter",
+      "model": "anthropic/claude-sonnet-4.5"
+    },
+    "VALIDATE": {
+      "route": "openrouter",
+      "model": "openai/gpt-5"
+    },
+    "REVIEW": {
+      "route": "openrouter",
+      "model": "anthropic/claude-sonnet-4.5"
+    },
+    "FINALIZE": {
+      "route": "openrouter",
+      "model": "openai/gpt-5"
+    },
+    "EXPLAIN": {
+      "route": "openrouter",
+      "model": "google/gemini-2.5-flash"
+    }
+  },
+  "emergency": {
+    "enabled": true,
+    "provider": "ollama",
+    "model": "qwen3:latest"
+  }
+}

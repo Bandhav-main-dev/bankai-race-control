@@ -1,31 +1,27 @@
 
-from __future__ import annotations
-
-import json
-import os
-import time
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
+import time
 
 import streamlit as st
 
 
 # =============================================================================
-# PROJECT
+# SOUL FORGE
 # =============================================================================
 
-PROJECT_ROOT = Path("/content/BANKAI-RACE-CONTROL")
-ROUTING_FILE = PROJECT_ROOT / "config" / "bankai_model_routing.json"
-LOG_FILE = PROJECT_ROOT / "data" / "v068_ui.log"
+PROJECT_ROOT = Path(
+    "/content/BANKAI-RACE-CONTROL"
+)
 
 
 # =============================================================================
-# PAGE
+# PAGE CONFIG
 # =============================================================================
 
 st.set_page_config(
-    page_title="BANKAI RACE CONTROL",
-    page_icon="🏎️",
+    page_title="SOUL FORGE",
+    page_icon="⚔️",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -35,1350 +31,1867 @@ st.set_page_config(
 # SESSION STATE
 # =============================================================================
 
-DEFAULT_STATE = {
-    "page": "HOME",
-    "chat_messages": [],
-    "mission": "SYSTEM STANDBY",
-    "monitoring": True,
-    "auto_refresh": False,
-    "last_refresh": datetime.now(),
+DEFAULTS = {
+
+    "page":
+        "Command Center",
+
+    "selected_project":
+        "BANKAI-RACE-CONTROL",
+
+    "chat_messages":
+        [],
+
+    "agentic_result":
+        None,
+
+    "agentic_prompt":
+        "",
+
+    "agentic_user_tested":
+        False,
+
+    "agentic_accepted":
+        False,
+
+    # PITMYDORO
+    "pit_running":
+        False,
+
+    "pit_started_at":
+        None,
+
+    "pit_elapsed":
+        0.0,
+
+    "pit_lap":
+        1,
+
+    "pit_duration":
+        25 * 60,
+
+    "pit_task":
+        "",
+
 }
 
-for key, value in DEFAULT_STATE.items():
+
+for key, value in DEFAULTS.items():
+
     if key not in st.session_state:
+
         st.session_state[key] = value
 
 
 # =============================================================================
-# CSS
+# BACKEND
 # =============================================================================
 
-st.markdown(
+def bankai_request(
+    prompt,
+    intent=None,
+):
+
     """
-    <style>
+    Production AI path.
+
+    UI
+      ↓
+    BANKAI AI BRIDGE
+      ↓
+    RUFLO
+      ↓
+    OPENROUTER
+      ↓
+    MODEL
+    """
 
-    /* ================================================================
-       GLOBAL
-       ================================================================ */
-
-    :root {
-        --black: #050609;
-        --black2: #0a0d12;
-        --panel: #0d1118;
-        --panel2: #111722;
-
-        --white: #f5f7fa;
-        --muted: #8993a3;
-
-        --blue: #1688ff;
-        --blue2: #063c8c;
-
-        --red: #e10600;
-        --red2: #8f0906;
-
-        --gold: #f5b942;
-        --gold2: #9d6d16;
-
-        --line: rgba(255,255,255,0.09);
-        --line-blue: rgba(22,136,255,0.30);
-        --line-red: rgba(225,6,0,0.30);
-        --line-gold: rgba(245,185,66,0.30);
-    }
-
-
-    /* ================================================================
-       APP BACKGROUND
-       ================================================================ */
-
-    html,
-    body,
-    [data-testid="stAppViewContainer"] {
-        background:
-            radial-gradient(
-                circle at 85% 5%,
-                rgba(22,136,255,0.13),
-                transparent 28%
-            ),
-            radial-gradient(
-                circle at 12% 35%,
-                rgba(225,6,0,0.09),
-                transparent 25%
-            ),
-            radial-gradient(
-                circle at 55% 100%,
-                rgba(245,185,66,0.06),
-                transparent 28%
-            ),
-            var(--black) !important;
-        color: var(--white) !important;
-    }
-
-
-    [data-testid="stHeader"] {
-        background: transparent !important;
-    }
-
-
-    .block-container {
-        max-width: 1700px !important;
-        padding-top: 1.2rem !important;
-        padding-bottom: 5rem !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-    }
-
-
-    /* ================================================================
-       TOP TASKBAR
-       ================================================================ */
-
-    div[data-testid="stHorizontalBlock"]:has(
-        button[kind="secondary"]
-    ) {
-        align-items: center;
-    }
-
-
-    /* ================================================================
-       BUTTONS
-       ================================================================ */
-
-    .stButton > button {
-        width: 100%;
-        min-height: 40px;
-
-        border: 1px solid var(--line);
-        border-radius: 8px;
-
-        background:
-            linear-gradient(
-                180deg,
-                rgba(255,255,255,0.055),
-                rgba(255,255,255,0.018)
-            );
-
-        color: #dce3ec;
-
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 1.2px;
-
-        transition:
-            border-color 0.18s ease,
-            background 0.18s ease,
-            transform 0.18s ease;
-    }
-
-
-    .stButton > button:hover {
-        border-color: var(--blue);
-        background:
-            linear-gradient(
-                180deg,
-                rgba(22,136,255,0.18),
-                rgba(22,136,255,0.04)
-            );
-        color: white;
-        transform: translateY(-1px);
-    }
-
-
-    /* ================================================================
-       HEADER
-       ================================================================ */
-
-    .bankai-header {
-        padding: 22px 24px 20px 24px;
-        margin-bottom: 14px;
-
-        border: 1px solid var(--line);
-        border-left: 3px solid var(--red);
-        border-top: 1px solid rgba(22,136,255,0.32);
-
-        border-radius: 12px;
-
-        background:
-            linear-gradient(
-                110deg,
-                rgba(225,6,0,0.08),
-                rgba(22,136,255,0.07),
-                rgba(245,185,66,0.04)
-            ),
-            var(--panel);
-
-        box-shadow:
-            0 18px 50px rgba(0,0,0,0.32);
-    }
-
-
-    .header-kicker {
-        color: var(--gold);
-        font-size: 10px;
-        font-weight: 900;
-        letter-spacing: 2.5px;
-        margin-bottom: 6px;
-    }
-
-
-    .header-title {
-        color: var(--white);
-        font-size: 31px;
-        font-weight: 950;
-        letter-spacing: 1.5px;
-        line-height: 1.1;
-    }
-
-
-    .header-subtitle {
-        color: var(--muted);
-        font-size: 12px;
-        margin-top: 7px;
-        letter-spacing: 1px;
-    }
-
-
-    /* ================================================================
-       STATUS
-       ================================================================ */
-
-    .status-online {
-        color: #b9ffd2;
-        font-size: 10px;
-        font-weight: 900;
-        letter-spacing: 1.6px;
-    }
-
-
-    .status-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #26d979;
-        margin-right: 7px;
-        box-shadow: 0 0 12px rgba(38,217,121,0.75);
-    }
-
-
-    /* ================================================================
-       METRIC CARDS
-       ================================================================ */
-
-    div[data-testid="stMetric"] {
-        background:
-            linear-gradient(
-                145deg,
-                rgba(255,255,255,0.055),
-                rgba(255,255,255,0.015)
-            );
-
-        border: 1px solid var(--line);
-        border-radius: 10px;
-
-        padding: 12px 14px;
-
-        min-height: 105px;
-    }
-
-
-    div[data-testid="stMetricLabel"] {
-        color: var(--muted) !important;
-        font-size: 9px !important;
-        font-weight: 900 !important;
-        letter-spacing: 1.5px !important;
-    }
-
-
-    div[data-testid="stMetricValue"] {
-        color: var(--white) !important;
-        font-weight: 950 !important;
-    }
-
-
-    /* ================================================================
-       PANELS
-       ================================================================ */
-
-    .panel-title {
-        color: var(--white);
-        font-size: 12px;
-        font-weight: 950;
-        letter-spacing: 1.7px;
-        margin-bottom: 3px;
-    }
-
-
-    .panel-subtitle {
-        color: var(--muted);
-        font-size: 10px;
-        margin-bottom: 14px;
-    }
-
-
-    /* ================================================================
-       EXPANDERS
-       ================================================================ */
-
-    div[data-testid="stExpander"] {
-        border: 1px solid var(--line) !important;
-        border-radius: 9px !important;
-        background: rgba(13,17,24,0.72) !important;
-    }
-
-
-    div[data-testid="stExpander"] summary {
-        color: var(--white) !important;
-    }
-
-
-    /* ================================================================
-       PROGRESS
-       ================================================================ */
-
-    div[data-testid="stProgress"] > div {
-        background: rgba(255,255,255,0.07) !important;
-    }
-
-
-    div[data-testid="stProgress"] > div > div {
-        background:
-            linear-gradient(
-                90deg,
-                var(--red),
-                var(--blue),
-                var(--gold)
-            ) !important;
-    }
-
-
-    /* ================================================================
-       CHAT
-       ================================================================ */
-
-    [data-testid="stChatMessage"] {
-        border: 1px solid var(--line);
-        border-radius: 10px;
-
-        background:
-            linear-gradient(
-                145deg,
-                rgba(255,255,255,0.035),
-                rgba(255,255,255,0.012)
-            );
-
-        margin-bottom: 8px;
-    }
-
-
-    [data-testid="stChatInput"] {
-        position: sticky;
-        bottom: 0;
-
-        background: rgba(5,6,9,0.96);
-
-        padding-top: 10px;
-        padding-bottom: 5px;
-
-        z-index: 20;
-    }
-
-
-    [data-testid="stChatInput"] textarea {
-        background: #0b0f16 !important;
-        color: white !important;
-
-        border: 1px solid rgba(22,136,255,0.45) !important;
-        border-radius: 10px !important;
-
-        min-height: 52px !important;
-    }
-
-
-    [data-testid="stChatInput"] textarea:focus {
-        border-color: var(--gold) !important;
-
-        box-shadow:
-            0 0 0 1px rgba(245,185,66,0.25),
-            0 0 25px rgba(22,136,255,0.12) !important;
-    }
-
-
-    /* ================================================================
-       INPUTS
-       ================================================================ */
-
-    input,
-    textarea {
-        color: var(--white) !important;
-    }
-
-
-    /* ================================================================
-       DIVIDER
-       ================================================================ */
-
-    hr {
-        border-color: var(--line) !important;
-    }
-
-
-    /* ================================================================
-       BADGES
-       ================================================================ */
-
-    .signal {
-        padding: 10px 12px;
-        margin-bottom: 7px;
-
-        border: 1px solid var(--line);
-        border-radius: 8px;
-
-        background: rgba(255,255,255,0.025);
-    }
-
-
-    .signal-name {
-        font-size: 11px;
-        font-weight: 850;
-        color: var(--white);
-    }
-
-
-    .signal-status {
-        font-size: 9px;
-        color: var(--muted);
-        margin-top: 2px;
-    }
-
-
-    /* ================================================================
-       OPERATION
-       ================================================================ */
-
-    .operation {
-        border: 1px solid var(--line-gold);
-        border-left: 3px solid var(--gold);
-
-        border-radius: 9px;
-
-        padding: 14px;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(245,185,66,0.08),
-                rgba(255,255,255,0.015)
-            );
-    }
-
-
-    .operation-name {
-        color: var(--gold);
-        font-size: 10px;
-        font-weight: 950;
-        letter-spacing: 1.5px;
-    }
-
-
-    .operation-text {
-        color: var(--white);
-        font-size: 14px;
-        font-weight: 800;
-        margin-top: 6px;
-    }
-
-
-    /* ================================================================
-       FOOTER / BOTTOM STATUS
-       ================================================================ */
-
-    .bottom-status {
-        margin-top: 28px;
-
-        border-top: 1px solid var(--line);
-
-        padding-top: 12px;
-
-        color: #687385;
-
-        font-size: 9px;
-        letter-spacing: 1.4px;
-
-        text-align: center;
-    }
-
-
-    /* ================================================================
-       MOBILE
-       ================================================================ */
-
-    @media (max-width: 900px) {
-
-        .block-container {
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-        }
-
-        .header-title {
-            font-size: 23px;
-        }
-
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# =============================================================================
-# HELPERS
-# =============================================================================
-
-def load_routing() -> dict:
     try:
-        if ROUTING_FILE.exists():
-            return json.loads(ROUTING_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        pass
-    return {}
 
-
-def project_files() -> int:
-    try:
-        return sum(
-            1
-            for p in PROJECT_ROOT.rglob("*")
-            if p.is_file()
-            and ".git" not in p.parts
-            and "__pycache__" not in p.parts
+        from app.core.bankai_ai_bridge import (
+            bankai_chat,
         )
-    except Exception:
-        return 0
 
+        kwargs = {}
 
-def log_events() -> int:
-    try:
-        if not LOG_FILE.exists():
-            return 0
-        return len(LOG_FILE.read_text(
-            encoding="utf-8",
-            errors="ignore"
-        ).splitlines())
-    except Exception:
-        return 0
+        if intent:
 
+            kwargs["force_intent"] = intent
 
-def detect_mode(text: str) -> str:
-    value = text.lower()
-
-    coding_words = [
-        "code",
-        "coding",
-        "build",
-        "create",
-        "implement",
-        "fix",
-        "debug",
-        "python",
-        "streamlit",
-        "django",
-    ]
-
-    review_words = [
-        "review",
-        "check my code",
-        "analyse my code",
-        "analyze my code",
-    ]
-
-    test_words = [
-        "test",
-        "pytest",
-        "ruff",
-        "error",
-        "failure",
-    ]
-
-    planning_words = [
-        "plan",
-        "planning",
-        "architecture",
-        "roadmap",
-        "design",
-    ]
-
-    knowledge_words = [
-        "document",
-        "paper",
-        "research",
-        "source",
-        "knowledge",
-    ]
-
-    if any(x in value for x in review_words):
-        return "REVIEW"
-
-    if any(x in value for x in test_words):
-        return "TESTING"
-
-    if any(x in value for x in coding_words):
-        return "CODING"
-
-    if any(x in value for x in planning_words):
-        return "PLANNING"
-
-    if any(x in value for x in knowledge_words):
-        return "KNOWLEDGE"
-
-    return "CHAT"
-
-
-def bankai_reply(prompt: str) -> str:
-    """
-    Preserve the existing BANKAI AI bridge.
-    """
-
-    try:
-        from app.core.bankai_ai_bridge import bankai_chat
-
-        result = bankai_chat(prompt)
-
-        if isinstance(result, dict):
-            return (
-                result.get("response")
-                or result.get("content")
-                or result.get("message")
-                or str(result)
-            )
-
-        return str(result)
+        return bankai_chat(
+            prompt,
+            **kwargs,
+        )
 
     except Exception as exc:
+
+        return {
+            "text":
+                (
+                    "BANKAI AI BRIDGE ERROR\n\n"
+                    f"{type(exc).__name__}: {exc}"
+                ),
+            "status":
+                "error",
+        }
+
+
+def result_text(result):
+
+    if isinstance(result, dict):
+
         return (
-            "BANKAI bridge is currently unavailable.\n\n"
-            f"Bridge status: {type(exc).__name__}: {exc}"
+            result.get("text")
+            or result.get("response")
+            or result.get("content")
+            or result.get("message")
+            or "No response."
         )
 
+    return str(result)
 
-def routing_summary() -> list[tuple[str, str, str]]:
-    routing = load_routing()
 
-    agents = routing.get("agents", {})
+def project_name():
 
-    result = []
-
-    for name in [
-        "planner",
-        "coder",
-        "tester",
-        "reviewer",
-        "knowledge",
-    ]:
-        item = agents.get(name, {})
-
-        result.append(
-            (
-                name.upper(),
-                str(item.get("provider", "UNCONFIGURED")),
-                str(item.get("model", "UNCONFIGURED")),
-            )
-        )
-
-    return result
+    return st.session_state.get(
+        "selected_project",
+        "BANKAI-RACE-CONTROL",
+    )
 
 
 # =============================================================================
 # HEADER
 # =============================================================================
 
-header_left, header_right = st.columns([4.5, 1])
+left, right = st.columns(
+    [6, 1],
+    gap="small",
+)
 
-with header_left:
+with left:
 
-    st.markdown(
-        "RACE CONTROL // BANKAI AI COMMAND SYSTEM"
-    )
-
-    st.title("🏎️ BANKAI RACE CONTROL")
-
-    st.caption(
-        "BLEACH × RED BULL RACING × MULTI-MODEL AI"
-    )
-
-with header_right:
-
-    st.write("")
-
-    st.success(
-        "SYSTEM ONLINE"
+    st.title(
+        "⚔️ SOUL FORGE"
     )
 
     st.caption(
-        datetime.now().strftime("%d %b %Y • %H:%M:%S")
+        "Personal Agentic AI Development Platform"
     )
+
+    st.caption(
+        "BLEACH × RED BULL RACING"
+        "  •  BUILD WITH DISCIPLINE"
+        "  •  SHIP WITH CONTROL"
+    )
+
+with right:
+
+    st.metric(
+        "SYSTEM",
+        "ONLINE",
+    )
+
+    st.caption(
+        datetime.now().strftime(
+            "%H:%M:%S"
+        )
+    )
+
+
+# =============================================================================
+# MOTIVATION
+# =============================================================================
+
+MOTIVATION = [
+
+    (
+        "BLEACH INSPIRED",
+        "A blade becomes stronger through discipline, repetition, and resolve.",
+    ),
+
+    (
+        "RACING MINDSET",
+        "Stay focused on the next lap. Improve the next decision.",
+    ),
+
+    (
+        "MAX-INSPIRED",
+        "Pressure is part of racing. The goal is to keep improving anyway.",
+    ),
+
+    (
+        "SOUL FORGE",
+        "Don't wait for perfect conditions. Forge the next step.",
+    ),
+
+]
+
+if "quote_index" not in st.session_state:
+
+    st.session_state.quote_index = 0
+
+
+quote_title, quote_text = MOTIVATION[
+    st.session_state.quote_index
+    % len(MOTIVATION)
+]
+
+st.info(
+    f"**{quote_title}** — {quote_text}"
+)
 
 
 # =============================================================================
 # TOP TASKBAR
 # =============================================================================
 
-st.divider()
+PAGES = [
 
-pages = [
-    "HOME",
-    "CHAT",
-    "AGENTS",
-    "CODER",
-    "TESTER",
-    "REVIEW",
-    "MODELS",
-    "RADIO",
-    "FOCUS",
-    "SYSTEM",
+    ("🏠", "Command Center"),
+
+    ("📁", "Projects"),
+
+    ("📚", "Knowledge"),
+
+    ("💬", "Chat"),
+
+    ("🤖", "Agentic AI"),
+
+    ("⏱️", "PITMYDORO"),
+
 ]
 
-cols = st.columns(len(pages))
+columns = st.columns(
+    len(PAGES),
+    gap="small",
+)
 
-for col, page_name in zip(cols, pages):
+for column, (emoji, page) in zip(
+    columns,
+    PAGES,
+):
 
-    with col:
+    with column:
 
         if st.button(
-            page_name,
-            key=f"nav_{page_name}",
+            f"{emoji} {page}",
+            key=f"nav_{page}",
             use_container_width=True,
+            type=(
+                "primary"
+                if st.session_state.page == page
+                else "secondary"
+            ),
         ):
-            st.session_state.page = page_name
+
+            st.session_state.page = page
+
+            st.rerun()
 
 
 st.divider()
 
 
 # =============================================================================
-# TOP METRICS
+# COMMAND CENTER
 # =============================================================================
 
-files = project_files()
-events = log_events()
+def render_command_center():
 
-m1, m2, m3, m4 = st.columns(4)
-
-with m1:
-    st.metric(
-        "COGNITIVE LOAD",
-        "87%",
-        "ACTIVE",
+    st.subheader(
+        "🏠 Command Center"
     )
 
-with m2:
-    st.metric(
-        "AI AGENTS",
-        "05",
-        "READY",
+    c1, c2, c3, c4 = st.columns(
+        4,
+        gap="small",
     )
 
-with m3:
-    st.metric(
-        "PROJECT FILES",
-        files,
-        "SCANNED",
-    )
-
-with m4:
-    st.metric(
-        "LOG EVENTS",
-        events,
-        "RECORDED",
-    )
-
-
-st.write("")
-
-
-# =============================================================================
-# HOME
-# =============================================================================
-
-if st.session_state.page == "HOME":
-
-    left, center, right = st.columns(
-        [1.05, 1.8, 1.05]
-    )
-
-
-    # -------------------------------------------------------------------------
-    # LEFT
-    # -------------------------------------------------------------------------
-
-    with left:
-
-        st.subheader("⚡ REIATSU MONITOR")
+    with c1:
 
         st.metric(
-            "SYSTEM ACTIVITY",
-            "87%",
-            "+4%",
+            "AI CORE",
+            "READY",
         )
 
-        st.progress(0.87)
+    with c2:
+
+        st.metric(
+            "AGENTIC ENGINE",
+            "READY",
+        )
+
+    with c3:
+
+        st.metric(
+            "PROJECT",
+            project_name(),
+        )
+
+    with c4:
+
+        st.metric(
+            "FOCUS LAP",
+            f"{st.session_state.pit_lap:02d}",
+        )
+
+    st.markdown(
+        "### ⚡ System"
+    )
+
+    c1, c2, c3 = st.columns(
+        3,
+        gap="small",
+    )
+
+    with c1:
+
+        st.success(
+            "BANKAI AI BRIDGE"
+        )
+
+    with c2:
+
+        st.success(
+            "RUFLO"
+        )
+
+    with c3:
+
+        st.success(
+            "OPENROUTER"
+        )
+
+    st.markdown(
+        "### 🧠 SOUL FORGE CORE"
+    )
+
+    modules = [
+
+        ("Conversation", 94),
+
+        ("Planning", 88),
+
+        ("Coding", 86),
+
+        ("Knowledge", 80),
+
+        ("Agentic Reasoning", 92),
+
+    ]
+
+    for name, value in modules:
 
         st.caption(
-            "Cognitive activity / model workload"
+            f"{name} · {value}%"
         )
+
+        st.progress(
+            value / 100
+        )
+
+    st.markdown(
+        "### 🏎️ Current Mission"
+    )
+
+    st.info(
+        st.session_state.pit_task
+        or "No active PITMYDORO mission."
+    )
+
+
+# =============================================================================
+# PROJECTS
+# =============================================================================
+
+def render_projects():
+
+    st.subheader(
+        "📁 Projects"
+    )
+
+    projects = [
+
+        "BANKAI-RACE-CONTROL",
+
+        "Einstain-ai-brain-v2",
+
+    ]
+
+    current = project_name()
+
+    selected = st.selectbox(
+        "Current Project",
+        projects,
+        index=(
+            projects.index(current)
+            if current in projects
+            else 0
+        ),
+    )
+
+    if selected != current:
+
+        st.session_state.selected_project = (
+            selected
+        )
+
+        st.rerun()
+
+    c1, c2, c3 = st.columns(
+        3,
+        gap="small",
+    )
+
+    with c1:
+
+        st.metric(
+            "PROJECT",
+            selected,
+        )
+
+    with c2:
+
+        st.metric(
+            "MODE",
+            "DEVELOPMENT",
+        )
+
+    with c3:
+
+        st.metric(
+            "FOCUS",
+            "PITMYDORO",
+        )
+
+    st.markdown(
+        "### 🔍 Project Signals"
+    )
+
+    signals = [
+
+        (
+            "AI Architecture",
+            "RUFLO + OPENROUTER",
+        ),
+
+        (
+            "Model Routing",
+            "MULTI-MODEL",
+        ),
+
+        (
+            "Development",
+            "ACTIVE",
+        ),
+
+        (
+            "Focus System",
+            "PITMYDORO",
+        ),
+
+    ]
+
+    for label, value in signals:
+
+        with st.container(
+            border=True
+        ):
+
+            c1, c2 = st.columns(
+                [2, 5],
+                gap="small",
+            )
+
+            with c1:
+
+                st.caption(label)
+
+            with c2:
+
+                st.write(value)
+
+
+# =============================================================================
+# KNOWLEDGE
+# =============================================================================
+
+
+def render_knowledge():
+
+    st.subheader(
+        "📚 Knowledge Studio"
+    )
+
+    st.caption(
+        "NotebookLM-inspired source-grounded research workspace."
+    )
+
+    # -------------------------------------------------------------------------
+    # SESSION STATE
+    # -------------------------------------------------------------------------
+
+    if "knowledge_sources" not in st.session_state:
+
+        st.session_state.knowledge_sources = []
+
+    if "knowledge_selected" not in st.session_state:
+
+        st.session_state.knowledge_selected = []
+
+    if "knowledge_answer" not in st.session_state:
+
+        st.session_state.knowledge_answer = ""
+
+    if "knowledge_question" not in st.session_state:
+
+        st.session_state.knowledge_question = ""
+
+    if "knowledge_notes" not in st.session_state:
+
+        st.session_state.knowledge_notes = ""
+
+    # -------------------------------------------------------------------------
+    # SOURCE COUNTS
+    # -------------------------------------------------------------------------
+
+    sources = st.session_state.knowledge_sources
+
+    source_count = len(sources)
+
+    total_words = sum(
+        item.get("words", 0)
+        for item in sources
+        if isinstance(item, dict)
+    )
+
+    # -------------------------------------------------------------------------
+    # HEADER METRICS
+    # -------------------------------------------------------------------------
+
+    m1, m2, m3, m4 = st.columns(
+        4,
+        gap="small",
+    )
+
+    with m1:
+
+        st.metric(
+            "SOURCES",
+            source_count,
+        )
+
+    with m2:
+
+        st.metric(
+            "WORDS",
+            f"{total_words:,}",
+        )
+
+    with m3:
+
+        st.metric(
+            "SELECTED",
+            len(
+                st.session_state.knowledge_selected
+            ),
+        )
+
+    with m4:
+
+        st.metric(
+            "INDEX",
+            "READY"
+            if source_count
+            else "EMPTY",
+        )
+
+    st.divider()
+
+    # =========================================================================
+    # MAIN WORKSPACE
+    # =========================================================================
+
+    source_col, research_col = st.columns(
+        [1, 2.5],
+        gap="large",
+    )
+
+    # =========================================================================
+    # SOURCE LIBRARY
+    # =========================================================================
+
+    with source_col:
+
+        st.markdown(
+            "### 📄 Sources"
+        )
+
+        st.caption(
+            "Add documents and choose which sources SOUL FORGE can use."
+        )
+
+        uploaded_files = st.file_uploader(
+            "Add sources",
+            type=[
+                "txt",
+                "md",
+                "pdf",
+                "csv",
+                "json",
+                "py",
+            ],
+            accept_multiple_files=True,
+            key="knowledge_uploads",
+        )
+
+        if uploaded_files:
+
+            for uploaded in uploaded_files:
+
+                existing_names = [
+                    item.get("name")
+                    for item in sources
+                    if isinstance(item, dict)
+                ]
+
+                if uploaded.name not in existing_names:
+
+                    try:
+
+                        raw = uploaded.read()
+
+                        text = raw.decode(
+                            "utf-8",
+                            errors="replace",
+                        )
+
+                        words = len(
+                            re.findall(
+                                r"\b\w+\b",
+                                text,
+                            )
+                        )
+
+                        sources.append(
+                            {
+                                "name":
+                                    uploaded.name,
+
+                                "text":
+                                    text,
+
+                                "words":
+                                    words,
+
+                                "size":
+                                    len(raw),
+
+                                "added":
+                                    datetime.now().isoformat(
+                                        timespec="seconds"
+                                    ),
+                            }
+                        )
+
+                        st.session_state.knowledge_sources = (
+                            sources
+                        )
+
+                    except Exception as exc:
+
+                        st.error(
+                            f"{uploaded.name}: {exc}"
+                        )
+
+            st.rerun()
 
         st.divider()
 
-        st.subheader("SYSTEM SIGNALS")
+        if sources:
 
-        signals = [
-            ("CORE ENGINE", "Operational"),
-            ("MEMORY", "Connected"),
-            ("RESEARCH", "Standing by"),
-            ("TESTING", "Ready"),
-            ("SECURITY", "Protected"),
-        ]
+            st.markdown(
+                "#### Source Library"
+            )
 
-        for name, status in signals:
+            for index, source in enumerate(
+                sources
+            ):
 
-            with st.container(border=True):
+                name = source.get(
+                    "name",
+                    f"Source {index + 1}",
+                )
 
-                st.write(f"**{name}**")
-                st.caption(status)
+                selected = (
+                    index
+                    in st.session_state.knowledge_selected
+                )
 
+                toggle = st.checkbox(
+                    name,
+                    value=selected,
+                    key=f"knowledge_source_{index}",
+                )
 
-    # -------------------------------------------------------------------------
-    # CENTER
-    # -------------------------------------------------------------------------
+                if toggle:
 
-    with center:
+                    if (
+                        index
+                        not in st.session_state.knowledge_selected
+                    ):
 
-        st.subheader("🧠 BANKAI COGNITIVE CORE")
+                        st.session_state.knowledge_selected.append(
+                            index
+                        )
 
-        st.caption(
-            "Real-time command-center overview"
+                else:
+
+                    if (
+                        index
+                        in st.session_state.knowledge_selected
+                    ):
+
+                        st.session_state.knowledge_selected.remove(
+                            index
+                        )
+
+            st.divider()
+
+            st.markdown(
+                "#### Source Actions"
+            )
+
+            c1, c2 = st.columns(
+                2,
+                gap="small",
+            )
+
+            with c1:
+
+                if st.button(
+                    "✓ ALL",
+                    use_container_width=True,
+                ):
+
+                    st.session_state.knowledge_selected = (
+                        list(range(len(sources)))
+                    )
+
+                    st.rerun()
+
+            with c2:
+
+                if st.button(
+                    "CLEAR",
+                    use_container_width=True,
+                ):
+
+                    st.session_state.knowledge_selected = []
+
+                    st.rerun()
+
+        else:
+
+            st.info(
+                "No sources yet.\n\n"
+                "Upload Markdown, text, PDF, CSV, JSON or Python files."
+            )
+
+        st.divider()
+
+        st.markdown(
+            "#### 📊 Source Status"
         )
 
-        modules = [
-            ("Reasoning Engine", 0.91),
-            ("Planning", 0.84),
-            ("Knowledge", 0.78),
-            ("Coding", 0.88),
-            ("Testing", 0.72),
-            ("Review", 0.81),
-        ]
+        if sources:
 
-        for name, value in modules:
-
-            st.write(
-                f"**{name}** — {int(value * 100)}%"
-            )
-
-            st.progress(value)
-
-        st.write("")
-
-        st.subheader("⚔ ACTIVE OPERATION")
-
-        with st.container(border=True):
-
-            st.caption(
-                "CURRENT MISSION"
-            )
-
-            st.write(
-                "**BANKAI SYSTEM STANDBY**"
+            st.success(
+                "SOURCE INDEX READY"
             )
 
             st.caption(
-                "Awaiting your next command."
+                f"{source_count} source(s) loaded"
             )
 
-            st.progress(0.18)
+            st.caption(
+                f"{total_words:,} words available"
+            )
 
+        else:
 
-    # -------------------------------------------------------------------------
-    # RIGHT
-    # -------------------------------------------------------------------------
+            st.warning(
+                "SOURCE LIBRARY EMPTY"
+            )
 
-    with right:
+    # =========================================================================
+    # RESEARCH CHAT
+    # =========================================================================
 
-        st.subheader("🛡 SYSTEM INTEGRITY")
+    with research_col:
 
-        checks = [
-            ("PROJECT", PROJECT_ROOT.exists()),
-            ("ROUTING", ROUTING_FILE.exists()),
-            ("AI BRIDGE", True),
-            ("STREAMLIT", True),
+        st.markdown(
+            "### 🧠 Research Chat"
+        )
+
+        selected_sources = [
+
+            sources[index]
+
+            for index
+            in st.session_state.knowledge_selected
+
+            if (
+                0 <= index < len(sources)
+            )
+
         ]
 
-        for name, passed in checks:
+        if selected_sources:
 
-            if passed:
-                st.success(
-                    f"{name} · PASS",
-                    
+            source_names = ", ".join(
+                source.get(
+                    "name",
+                    "Unknown",
                 )
+                for source in selected_sources
+            )
+
+            st.success(
+                f"Using {len(selected_sources)} source(s)"
+            )
+
+            st.caption(
+                source_names
+            )
+
+        else:
+
+            st.info(
+                "Select one or more sources from the left."
+            )
+
+        question = st.text_area(
+            "Research Question",
+            value=(
+                st.session_state.knowledge_question
+            ),
+            placeholder=(
+                "Ask a question about your selected sources..."
+            ),
+            height=130,
+            key="knowledge_question_input",
+        )
+
+        st.session_state.knowledge_question = question
+
+        c1, c2 = st.columns(
+            [3, 1],
+            gap="small",
+        )
+
+        with c1:
+
+            ask = st.button(
+                "🔍 ASK SOUL FORGE",
+                use_container_width=True,
+                type="primary",
+            )
+
+        with c2:
+
+            clear_answer = st.button(
+                "CLEAR",
+                use_container_width=True,
+            )
+
+        if clear_answer:
+
+            st.session_state.knowledge_answer = ""
+
+            st.rerun()
+
+        if ask:
+
+            if not selected_sources:
+
+                st.warning(
+                    "Select at least one source."
+                )
+
+            elif not question.strip():
+
+                st.warning(
+                    "Enter a research question."
+                )
+
             else:
-                st.error(
-                    f"{name} · CHECK",
-                    icon="!",
+
+                combined_context = "\n\n".join(
+
+                    (
+                        f"=== SOURCE: "
+                        f"{source.get('name', 'Unknown')} ===\n"
+                        f"{source.get('text', '')}"
+                    )
+
+                    for source
+                    in selected_sources
+
                 )
 
-        st.divider()
+                research_prompt = f"""
+You are SOUL FORGE Knowledge Research.
 
-        st.subheader("🤖 ROUTING")
+Answer the user's question using ONLY the supplied source material.
 
-        for name, provider, model in routing_summary():
+If the answer is not supported by the sources, clearly say that
+the available sources do not provide enough evidence.
 
-            with st.container(border=True):
+Be precise and structured.
 
-                st.write(
-                    f"**{name}**"
-                )
+USER QUESTION:
+{question.strip()}
+
+SOURCE MATERIAL:
+{combined_context}
+"""
+
+                with st.spinner(
+                    "SOUL FORGE is researching..."
+                ):
+
+                    try:
+
+                        result = bankai_request(
+                            research_prompt,
+                        )
+
+                        answer = result_text(
+                            result
+                        )
+
+                        st.session_state.knowledge_answer = (
+                            answer
+                        )
+
+                    except Exception as exc:
+
+                        st.session_state.knowledge_answer = (
+                            f"Knowledge research error: {exc}"
+                        )
+
+        # ---------------------------------------------------------------------
+        # ANSWER
+        # ---------------------------------------------------------------------
+
+        if (
+            st.session_state.knowledge_answer
+        ):
+
+            st.divider()
+
+            st.markdown(
+                "### 💡 Answer"
+            )
+
+            st.write(
+                st.session_state.knowledge_answer
+            )
+
+            st.divider()
+
+            st.markdown(
+                "### 📌 Sources Used"
+            )
+
+            for source in selected_sources:
 
                 st.caption(
-                    f"{provider} · {model}"
+                    f"📄 {source.get('name', 'Unknown')}"
                 )
+
+        # ---------------------------------------------------------------------
+        # NOTES
+        # ---------------------------------------------------------------------
 
         st.divider()
 
-        if st.button(
-            "REFRESH SYSTEM",
-            use_container_width=True,
-        ):
-            st.session_state.last_refresh = datetime.now()
-            st.rerun()
+        st.markdown(
+            "### 📝 Research Notes"
+        )
+
+        st.session_state.knowledge_notes = (
+            st.text_area(
+                "Notes",
+                value=(
+                    st.session_state.knowledge_notes
+                ),
+                placeholder=(
+                    "Save ideas, findings, hypotheses or follow-up questions..."
+                ),
+                height=150,
+                label_visibility="collapsed",
+                key="knowledge_notes_input",
+            )
+        )
+
+    # =========================================================================
+    # BOTTOM RESEARCH TOOLS
+    # =========================================================================
+
+    st.divider()
+
+    st.markdown(
+        "### 📖 Research Workspace"
+    )
+
+    tab1, tab2, tab3 = st.tabs(
+        [
+            "📄 SOURCES",
+            "💬 CHAT",
+            "🎯 STUDY",
+        ]
+    )
+
+    with tab1:
+
+        if sources:
+
+            for source in sources:
+
+                with st.expander(
+                    f"📄 {source.get('name', 'Unknown')}"
+                ):
+
+                    st.caption(
+                        f"{source.get('words', 0):,} words"
+                    )
+
+                    text = source.get(
+                        "text",
+                        "",
+                    )
+
+                    if len(text) > 5000:
+
+                        st.text(
+                            text[:5000]
+                        )
+
+                        st.caption(
+                            "Preview limited to 5,000 characters."
+                        )
+
+                    else:
+
+                        st.text(
+                            text
+                        )
+
+        else:
+
+            st.info(
+                "Upload sources to inspect them here."
+            )
+
+    with tab2:
+
+        if st.session_state.knowledge_answer:
+
+            st.write(
+                st.session_state.knowledge_answer
+            )
+
+        else:
+
+            st.info(
+                "Your research answers will appear here."
+            )
+
+    with tab3:
+
+        st.markdown(
+            "#### 🎯 Study Mode"
+        )
+
+        st.caption(
+            "Turn your sources into active learning."
+        )
+
+        if sources:
+
+            study_topics = [
+
+                source.get(
+                    "name",
+                    "Source",
+                )
+
+                for source
+                in sources
+
+            ]
+
+            topic = st.selectbox(
+                "Study Source",
+                study_topics,
+            )
+
+            st.write(
+                "Use Research Chat to ask for:"
+            )
+
+            st.write(
+                "• summaries"
+            )
+
+            st.write(
+                "• explanations"
+            )
+
+            st.write(
+                "• key concepts"
+            )
+
+            st.write(
+                "• comparisons"
+            )
+
+            st.write(
+                "• questions"
+            )
+
+            st.write(
+                "• revision material"
+            )
+
+        else:
+
+            st.info(
+                "Add sources to activate Study Mode."
+            )
 
 
 # =============================================================================
 # CHAT
 # =============================================================================
 
-elif st.session_state.page == "CHAT":
+def render_chat():
 
-    st.subheader("💬 BANKAI AI")
-
-    st.caption(
-        "Talk normally. BANKAI automatically determines whether "
-        "your request is conversation, planning, knowledge, coding, "
-        "testing, or review."
+    st.subheader(
+        "💬 SOUL FORGE Chat"
     )
 
-    if not st.session_state.chat_messages:
+    st.caption(
+        "SOUL FORGE → RUFLO → OPENROUTER"
+    )
 
-        st.info(
-            "Try:  'Hey BANKAI, how are you?'  •  "
-            "'Explain quantum computing.'  •  "
-            "'Plan my Einstein AI project.'"
-        )
-
-    for message in st.session_state.chat_messages:
+    for message in (
+        st.session_state.chat_messages
+    ):
 
         with st.chat_message(
-            message["role"]
+            message.get(
+                "role",
+                "user",
+            )
         ):
 
             st.write(
-                message["content"]
+                message.get(
+                    "content",
+                    "",
+                )
             )
 
-            if message.get("mode"):
-
-                st.caption(
-                    f"ROUTED MODE · {message['mode']}"
-                )
-
-
     prompt = st.chat_input(
-        "Command BANKAI..."
+        "Ask SOUL FORGE..."
     )
 
     if prompt:
 
-        mode = detect_mode(prompt)
-
         st.session_state.chat_messages.append(
             {
-                "role": "user",
-                "content": prompt,
-                "mode": mode,
+                "role":
+                    "user",
+
+                "content":
+                    prompt,
             }
         )
 
-        with st.spinner(
-            f"BANKAI · {mode}"
+        with st.chat_message(
+            "user"
         ):
 
-            answer = bankai_reply(prompt)
+            st.write(prompt)
 
-        st.session_state.chat_messages.append(
-            {
-                "role": "assistant",
-                "content": answer,
-                "mode": mode,
-            }
-        )
+        with st.chat_message(
+            "assistant"
+        ):
+
+            with st.spinner(
+                "BANKAI THINKING..."
+            ):
+
+                result = bankai_request(
+                    prompt,
+                    intent="CHAT",
+                )
+
+            response = result_text(
+                result
+            )
+
+            st.write(
+                response
+            )
+
+            st.session_state.chat_messages.append(
+                {
+                    "role":
+                        "assistant",
+
+                    "content":
+                        response,
+                }
+            )
 
         st.rerun()
 
 
 # =============================================================================
-# AGENTS
+# AGENTIC AI
 # =============================================================================
 
-elif st.session_state.page == "AGENTS":
+def render_agentic():
 
-    st.subheader("🧠 AGENT COMMAND")
+    st.subheader(
+        "🤖 Agentic AI"
+    )
 
     st.caption(
-        "BANKAI multi-agent architecture"
+        "UNDERSTAND → PLAN → IMPLEMENT → "
+        "VALIDATE → REVIEW → FINALIZE"
     )
 
-    agents = [
-        ("PLANNER", "Architecture and planning"),
-        ("CODER", "Implementation"),
-        ("TESTER", "Testing and failure analysis"),
-        ("REVIEWER", "Security and code review"),
-        ("KNOWLEDGE", "Source-grounded knowledge"),
-    ]
-
-    a, b = st.columns(2)
-
-    for index, (name, role) in enumerate(agents):
-
-        with a if index % 2 == 0 else b:
-
-            with st.container(border=True):
-
-                st.write(
-                    f"### {name}"
-                )
-
-                st.caption(role)
-
-                st.success(
-                    "READY"
-                )
-
-
-# =============================================================================
-# CODER
-# =============================================================================
-
-elif st.session_state.page == "CODER":
-
-    st.subheader("💻 CODER")
-
-    st.caption(
-        "Implementation command center"
-    )
-
-    st.info(
-        "Coding tasks are routed through BANKAI's AI bridge. "
-        "The UI does not replace the coding backend."
-    )
-
-    request = st.text_area(
-        "CODING REQUEST",
-        placeholder=(
-            "Example: Build a Streamlit login page..."
+    prompt = st.text_area(
+        "Mission",
+        value=(
+            st.session_state.agentic_prompt
         ),
-        height=180,
+        placeholder=(
+            "Describe the development mission..."
+        ),
+        height=120,
     )
+
+    st.session_state.agentic_prompt = prompt
 
     if st.button(
-        "SEND TO CODER",
+        "🚀 START AGENTIC WORKFLOW",
         use_container_width=True,
     ):
 
-        if request.strip():
+        if not prompt.strip():
 
-            answer = bankai_reply(
-                request
+            st.warning(
+                "Enter a mission first."
             )
 
-            st.write(answer)
+        else:
 
+            with st.status(
+                "RUFLO workflow running...",
+                expanded=True,
+            ) as status:
 
-# =============================================================================
-# TESTER
-# =============================================================================
+                st.write(
+                    "🧠 UNDERSTAND"
+                )
 
-elif st.session_state.page == "TESTER":
+                st.write(
+                    "📋 PLAN"
+                )
 
-    st.subheader("🧪 TEST CONTROL")
+                st.write(
+                    "⚙️ IMPLEMENT"
+                )
 
-    st.caption(
-        "Testing and failure-analysis command center"
+                st.write(
+                    "🧪 VALIDATE"
+                )
+
+                st.write(
+                    "🔎 REVIEW"
+                )
+
+                st.write(
+                    "🏁 FINALIZE"
+                )
+
+                result = bankai_request(
+                    prompt,
+                    intent="AGENTIC",
+                )
+
+                st.session_state.agentic_result = (
+                    result
+                )
+
+                status.update(
+                    label="Workflow complete",
+                    state="complete",
+                )
+
+    if (
+        st.session_state.agentic_result
+        is not None
+    ):
+
+        st.markdown(
+            "### 🧩 Result"
+        )
+
+        st.write(
+            result_text(
+                st.session_state.agentic_result
+            )
+        )
+
+    st.markdown(
+        "### 👨‍💻 User Control"
     )
 
-    c1, c2 = st.columns(2)
+    c1, c2 = st.columns(
+        2,
+        gap="small",
+    )
 
     with c1:
 
         if st.button(
-            "SCAN PROJECT",
+            "🧪 USER TEST",
             use_container_width=True,
         ):
 
-            st.info(
-                "Project scan requested."
+            st.session_state.agentic_user_tested = (
+                True
+            )
+
+            st.success(
+                "Marked for user testing."
             )
 
     with c2:
 
         if st.button(
-            "RUN VALIDATION",
+            "✓ ACCEPT",
             use_container_width=True,
         ):
 
-            st.info(
-                "Validation pipeline requested."
+            st.session_state.agentic_accepted = (
+                True
             )
 
-    st.divider()
-
-    st.write(
-        "### Current Checks"
-    )
-
-    st.success("Streamlit UI · READY")
-    st.success("AI bridge · READY")
-    st.success("Routing configuration · READY")
-    st.success("Project path · FOUND")
-
-
-# =============================================================================
-# REVIEW
-# =============================================================================
-
-elif st.session_state.page == "REVIEW":
-
-    st.subheader("🔍 REVIEW")
-
-    st.caption(
-        "Code and architecture review"
-    )
-
-    code = st.text_area(
-        "PASTE CODE",
-        height=300,
-        placeholder="Paste Python code here...",
-    )
-
-    if st.button(
-        "REVIEW WITH BANKAI",
-        use_container_width=True,
-    ):
-
-        if code.strip():
-
-            prompt = (
-                "Review the following code for correctness, "
-                "security, architecture, bugs, and improvements.\n\n"
-                f"{code}"
+            st.success(
+                "User acceptance recorded."
             )
 
-            with st.spinner("BANKAI REVIEWING..."):
-
-                result = bankai_reply(prompt)
-
-            st.write(result)
-
 
 # =============================================================================
-# MODELS
+# PITMYDORO
 # =============================================================================
 
-elif st.session_state.page == "MODELS":
+def render_pitmydoro():
 
-    st.subheader("🤖 MODEL CONTROL")
-
-    st.caption(
-        "BANKAI model-provider routing"
+    st.subheader(
+        "⏱️ PITMYDORO"
     )
 
-    routing = load_routing()
+    st.caption(
+        "Focus timer for developers — "
+        "one lap, one mission, one improvement."
+    )
 
-    if routing:
+    # -------------------------------------------------------------------------
+    # CURRENT TIMER
+    # -------------------------------------------------------------------------
 
-        agents = routing.get(
-            "agents",
-            {}
+    if st.session_state.pit_running:
+
+        if (
+            st.session_state.pit_started_at
+            is None
+        ):
+
+            st.session_state.pit_started_at = (
+                time.time()
+            )
+
+        elapsed = (
+            st.session_state.pit_elapsed
+            + (
+                time.time()
+                - st.session_state.pit_started_at
+            )
         )
-
-        for name, config in agents.items():
-
-            with st.container(border=True):
-
-                st.write(
-                    f"**{name.upper()}**"
-                )
-
-                st.caption(
-                    f"Provider: {config.get('provider', 'unknown')}"
-                )
-
-                st.write(
-                    f"Model: `{config.get('model', 'unknown')}`"
-                )
-
-                st.caption(
-                    config.get("role", "")
-                )
 
     else:
 
-        st.warning(
-            "Model routing configuration not found."
+        elapsed = (
+            st.session_state.pit_elapsed
         )
 
-
-# =============================================================================
-# RADIO
-# =============================================================================
-
-elif st.session_state.page == "RADIO":
-
-    st.subheader("📡 RACE RADIO")
-
-    st.caption(
-        "BANKAI command telemetry"
+    remaining = max(
+        0,
+        st.session_state.pit_duration
+        - elapsed,
     )
 
-    st.info(
-        "Race Radio interface ready."
+    # -------------------------------------------------------------------------
+    # SIDE-BY-SIDE LAYOUT
+    # -------------------------------------------------------------------------
+
+    timer_col, focus_col = st.columns(
+        [1.25, 1],
+        gap="large",
     )
 
-    st.write(
-        f"Last refresh: "
-        f"{st.session_state.last_refresh.strftime('%H:%M:%S')}"
-    )
+    # -------------------------------------------------------------------------
+    # TIMER
+    # -------------------------------------------------------------------------
 
-    st.write(
-        "SYSTEM → ONLINE"
-    )
+    with timer_col:
 
-    st.write(
-        "CORE → OPERATIONAL"
-    )
+        with st.container(
+            border=True
+        ):
 
-    st.write(
-        "AI BRIDGE → READY"
-    )
+            st.markdown(
+                "### 🏁 LAP TIMER"
+            )
 
+            st.metric(
+                "LAP",
+                f"{st.session_state.pit_lap:02d}",
+            )
 
-# =============================================================================
-# FOCUS
-# =============================================================================
+            minutes = int(
+                remaining // 60
+            )
 
-elif st.session_state.page == "FOCUS":
+            seconds = int(
+                remaining % 60
+            )
 
-    st.subheader("⏱️ FOCUS MODE")
+            st.metric(
+                "TIME REMAINING",
+                f"{minutes:02d}:{seconds:02d}",
+            )
 
-    st.caption(
-        "Minimal command environment"
-    )
+            progress = (
 
-    mission = st.text_input(
-        "CURRENT MISSION",
-        value=st.session_state.mission,
-    )
+                min(
+                    1.0,
+                    elapsed
+                    / st.session_state.pit_duration,
+                )
 
-    st.session_state.mission = mission
+                if st.session_state.pit_duration
+                else 0
+            )
 
-    st.progress(0.42)
+            st.progress(
+                progress
+            )
 
-    st.metric(
-        "MISSION PROGRESS",
-        "42%",
-        "ACTIVE",
-    )
+            if st.session_state.pit_running:
 
-    if st.button(
-        "COMPLETE MISSION",
-        use_container_width=True,
-    ):
+                st.success(
+                    "🔴 RACING"
+                )
 
-        st.session_state.mission = "MISSION COMPLETE"
+                st.caption(
+                    "FULL FOCUS • STAY ON THE LAP"
+                )
 
-        st.success(
-            "Mission marked complete."
-        )
+            else:
 
+                st.info(
+                    "⚫ STANDBY"
+                )
 
-# =============================================================================
-# SYSTEM
-# =============================================================================
+                st.caption(
+                    "READY TO START"
+                )
 
-elif st.session_state.page == "SYSTEM":
+    # -------------------------------------------------------------------------
+    # PITMYDORO SIDE
+    # -------------------------------------------------------------------------
 
-    st.subheader("⚙️ SYSTEM")
+    with focus_col:
 
-    st.caption(
-        "BANKAI Race Control system configuration"
-    )
+        with st.container(
+            border=True
+        ):
 
-    st.toggle(
-        "Monitoring",
-        key="monitoring",
-    )
+            st.markdown(
+                "### 🏎️ PITMYDORO"
+            )
 
-    st.toggle(
-        "Auto Refresh",
-        key="auto_refresh",
-    )
+            st.caption(
+                "FOCUS SESSION"
+            )
+
+            st.markdown(
+                "#### 🎯 Current Mission"
+            )
+
+            task = st.text_input(
+                "Mission",
+                value=(
+                    st.session_state.pit_task
+                ),
+                placeholder=(
+                    "What are you focusing on?"
+                ),
+            )
+
+            st.session_state.pit_task = task
+
+            st.markdown(
+                "#### ⚙️ Session"
+            )
+
+            duration = st.selectbox(
+                "Duration",
+                [
+                    15,
+                    25,
+                    45,
+                    60,
+                ],
+                index=(
+                    [15, 25, 45, 60].index(
+                        st.session_state.pit_duration
+                        // 60
+                    )
+                    if (
+                        st.session_state.pit_duration
+                        // 60
+                    ) in [15, 25, 45, 60]
+                    else 1
+                ),
+                format_func=lambda value:
+                    f"{value} minutes",
+            )
+
+            if (
+                not st.session_state.pit_running
+                and duration * 60
+                != st.session_state.pit_duration
+            ):
+
+                st.session_state.pit_duration = (
+                    duration * 60
+                )
+
+                st.session_state.pit_elapsed = (
+                    0.0
+                )
+
+            st.markdown(
+                "#### 🏎️ Controls"
+            )
+
+            c1, c2 = st.columns(
+                2,
+                gap="small",
+            )
+
+            with c1:
+
+                if not st.session_state.pit_running:
+
+                    if st.button(
+                        "🏁 START",
+                        use_container_width=True,
+                    ):
+
+                        st.session_state.pit_running = (
+                            True
+                        )
+
+                        st.session_state.pit_started_at = (
+                            time.time()
+                        )
+
+                        st.rerun()
+
+                else:
+
+                    if st.button(
+                        "⏸ PAUSE",
+                        use_container_width=True,
+                    ):
+
+                        st.session_state.pit_elapsed = (
+                            elapsed
+                        )
+
+                        st.session_state.pit_running = (
+                            False
+                        )
+
+                        st.session_state.pit_started_at = (
+                            None
+                        )
+
+                        st.rerun()
+
+            with c2:
+
+                if st.button(
+                    "🔄 RESET",
+                    use_container_width=True,
+                ):
+
+                    st.session_state.pit_running = (
+                        False
+                    )
+
+                    st.session_state.pit_started_at = (
+                        None
+                    )
+
+                    st.session_state.pit_elapsed = (
+                        0.0
+                    )
+
+                    st.rerun()
+
+            st.divider()
+
+            st.markdown(
+                "### 🧠 DRIVER MINDSET"
+            )
+
+            st.info(
+                "One task.\n\n"
+                "One decision.\n\n"
+                "One improvement."
+            )
+
+    # -------------------------------------------------------------------------
+    # LAP CONTROL
+    # -------------------------------------------------------------------------
 
     st.divider()
 
-    st.write(
-        "### Project"
+    st.markdown(
+        "### 🏎️ RACE CONTROL"
     )
 
-    st.write(
-        f"**Path:** `{PROJECT_ROOT}`"
+    c1, c2, c3 = st.columns(
+        3,
+        gap="small",
     )
 
-    st.write(
-        f"**Files:** {project_files()}"
-    )
+    with c1:
 
-    st.write(
-        f"**Log events:** {log_events()}"
-    )
+        if st.button(
+            "⏭️ NEXT LAP",
+            use_container_width=True,
+        ):
 
-    if st.button(
-        "CLEAR CHAT SESSION",
-        use_container_width=True,
-    ):
+            st.session_state.pit_lap += 1
 
-        st.session_state.chat_messages = []
+            st.session_state.pit_elapsed = (
+                0.0
+            )
 
-        st.success(
-            "Chat session cleared."
+            st.session_state.pit_started_at = (
+
+                time.time()
+
+                if st.session_state.pit_running
+
+                else None
+
+            )
+
+            st.rerun()
+
+    with c2:
+
+        if st.button(
+            "🏁 NEW SESSION",
+            use_container_width=True,
+        ):
+
+            st.session_state.pit_running = (
+                False
+            )
+
+            st.session_state.pit_started_at = (
+                None
+            )
+
+            st.session_state.pit_elapsed = (
+                0.0
+            )
+
+            st.session_state.pit_lap = 1
+
+            st.rerun()
+
+    with c3:
+
+        if st.button(
+            "🎯 FOCUS MODE",
+            use_container_width=True,
+        ):
+
+            st.session_state.pit_running = (
+                True
+            )
+
+            st.session_state.pit_started_at = (
+                time.time()
+            )
+
+            st.rerun()
+
+    # -------------------------------------------------------------------------
+    # LIVE REFRESH
+    # -------------------------------------------------------------------------
+
+    if st.session_state.pit_running:
+
+        @st.fragment(
+            run_every="1s"
         )
+        def pitmydoro_live():
+
+            if (
+                st.session_state.pit_started_at
+                is None
+            ):
+
+                return
+
+            current = (
+                st.session_state.pit_elapsed
+                + (
+                    time.time()
+                    - st.session_state.pit_started_at
+                )
+            )
+
+            remaining_live = max(
+                0,
+                st.session_state.pit_duration
+                - current,
+            )
+
+            minutes_live = int(
+                remaining_live // 60
+            )
+
+            seconds_live = int(
+                remaining_live % 60
+            )
+
+            st.metric(
+                "LIVE COUNTDOWN",
+                f"{minutes_live:02d}:{seconds_live:02d}",
+            )
+
+            if remaining_live <= 0:
+
+                st.warning(
+                    "🏁 LAP COMPLETE"
+                )
+
+        pitmydoro_live()
 
 
 # =============================================================================
-# AUTO REFRESH
+# ROUTER
 # =============================================================================
 
-if st.session_state.auto_refresh:
+if (
+    st.session_state.page
+    == "Command Center"
+):
 
-    time.sleep(5)
+    render_command_center()
 
-    st.rerun()
+elif (
+    st.session_state.page
+    == "Projects"
+):
+
+    render_projects()
+
+elif (
+    st.session_state.page
+    == "Knowledge"
+):
+
+    render_knowledge()
+
+elif (
+    st.session_state.page
+    == "Chat"
+):
+
+    render_chat()
+
+elif (
+    st.session_state.page
+    == "Agentic AI"
+):
+
+    render_agentic()
+
+elif (
+    st.session_state.page
+    == "PITMYDORO"
+):
+
+    render_pitmydoro()
 
 
 # =============================================================================
-# BOTTOM STATUS
+# FOOTER
 # =============================================================================
 
 st.divider()
 
-st.caption(
-    "BANKAI RACE CONTROL  •  BLEACH × RED BULL RACING  •  "
-    "GENERAL AI × AGENTS × CODING × KNOWLEDGE × TESTING"
+c1, c2, c3 = st.columns(
+    [2, 5, 2],
+    gap="small",
 )
 
+with c1:
+
+    st.caption(
+        "⚔️ SOUL FORGE"
+    )
+
+with c2:
+
+    st.caption(
+        f"PROJECT • {project_name()}"
+    )
+
+with c3:
+
+    st.caption(
+        datetime.now().strftime(
+            "%H:%M"
+        )
+    )

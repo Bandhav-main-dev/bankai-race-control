@@ -1,0 +1,24 @@
+{
+  "agents": {
+    "agent-1788523394663-in89h5": {
+      "agentId": "agent-1788523394663-in89h5",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "openrouter",
+        "model": "anthropic/claude-sonnet-4.5",
+        "task": "You are operating as the coding agent for SOUL FORGE. Do not modify any files for this test. Do not execute destructive commands. Simply analyze the current project and respond with exactly: SOUL FORGE RUFLO AGENT EXECUTION PASSED. Then briefly state which model/provider you believe handled the request.",
+        "timeout": 180,
+        "autoTools": true
+      },
+      "createdAt": "2026-09-04T12:03:14.663Z",
+      "model": "sonnet",
+      "modelRoutedBy": "explicit",
+      "modelId": "anthropic/claude-sonnet-4.5",
+      "provider": "openrouter"
+    }
+  },
+  "version": "3.0.0"
+}

@@ -1,0 +1,41 @@
+{
+  "product": "SOUL FORGE",
+  "architecture": {
+    "orchestrator": "RUFLO",
+    "gateway": "OPENROUTER",
+    "emergency_fallback": "OLLAMA"
+  },
+  "openrouter": {
+    "enabled": false,
+    "models": [
+      "anthropic/claude-sonnet-4.5",
+      "openai/gpt-5",
+      "google/gemini-2.5-flash"
+    ]
+  },
+  "ollama": {
+    "enabled": true,
+    "base_url": "http://127.0.0.1:11434",
+    "model": "qwen3:latest"
+  },
+  "routing": {
+    "primary": [
+      "Claude",
+      "GPT",
+      "Gemini"
+    ],
+    "emergency": [
+      "Ollama",
+      "qwen3:latest"
+    ]
+  },
+  "agentic_stages": [
+    "UNDERSTAND",
+    "PLAN",
+    "IMPLEMENT",
+    "VALIDATE",
+    "REVIEW",
+    "FINALIZE",
+    "EXPLAIN"
+  ]
+}

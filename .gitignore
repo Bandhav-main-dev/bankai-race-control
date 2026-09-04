@@ -68,3 +68,10 @@ data/v066_test_ruff_backup/
 data/v066_test_schema_backup/
 data/v066_uuid_fix_backup/
 
+
+# Ruflo local secrets and runtime data
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/

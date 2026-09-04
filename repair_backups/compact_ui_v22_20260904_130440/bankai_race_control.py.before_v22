@@ -1,0 +1,2135 @@
+
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import streamlit as st
+
+
+# =============================================================================
+# PATHS
+# =============================================================================
+
+ROOT = Path(
+    "/content/BANKAI-RACE-CONTROL"
+)
+
+ROUTING_FILE = (
+    ROOT
+    / "config"
+    / "bankai_model_routing.json"
+)
+
+TELEMETRY_FILE = (
+    ROOT
+    / "data"
+    / "last_routing_telemetry.json"
+)
+
+LOG_FILE = (
+    ROOT
+    / "data"
+    / "v068_ui.log"
+)
+
+
+# =============================================================================
+# PAGE CONFIG
+# =============================================================================
+
+st.set_page_config(
+    page_title="BANKAI RACE CONTROL",
+    page_icon="🏎️",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+
+# =============================================================================
+# SESSION STATE
+# =============================================================================
+
+if "page" not in st.session_state:
+    st.session_state.page = "HOME"
+
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+
+if "mission" not in st.session_state:
+    st.session_state.mission = "SYSTEM STANDBY"
+
+if "sf_live_telemetry" not in st.session_state:
+    st.session_state.sf_live_telemetry = {}
+
+
+# =============================================================================
+# CSS
+# =============================================================================
+
+st.markdown(
+    """
+<style>
+
+/* =========================================================================
+   GLOBAL
+   ========================================================================= */
+
+.stApp {
+
+    background:
+        radial-gradient(
+            circle at 85% 0%,
+            rgba(22,119,255,.09),
+            transparent 30%
+        ),
+
+        radial-gradient(
+            circle at 0% 35%,
+            rgba(225,6,0,.07),
+            transparent 26%
+        ),
+
+        radial-gradient(
+            circle at 50% 100%,
+            rgba(242,184,75,.035),
+            transparent 32%
+        ),
+
+        #080b10;
+}
+
+
+.block-container {
+
+    max-width: 1500px;
+
+    padding-top: 1rem !important;
+
+    padding-bottom: 5rem !important;
+}
+
+
+/* =========================================================================
+   HEADER
+   ========================================================================= */
+
+.bankai-kicker {
+
+    color: #f2b84b;
+
+    font-size: 10px;
+
+    font-weight: 900;
+
+    letter-spacing: 2px;
+
+    margin-bottom: 5px;
+}
+
+
+.bankai-title {
+
+    color: #f4f6f8;
+
+    font-size: 29px;
+
+    font-weight: 900;
+
+    letter-spacing: 1px;
+}
+
+
+.bankai-subtitle {
+
+    color: #8d98a8;
+
+    font-size: 11px;
+
+    letter-spacing: 1px;
+
+    margin-top: 3px;
+}
+
+
+.bankai-online {
+
+    color: #39d98a;
+
+    font-size: 11px;
+
+    font-weight: 900;
+
+    text-align: right;
+
+    letter-spacing: 1px;
+}
+
+
+/* =========================================================================
+   NAVIGATION
+   ========================================================================= */
+
+.stButton > button {
+
+    border:
+
+        1px solid
+        rgba(255,255,255,.09);
+
+    border-radius: 7px;
+
+    background:
+        rgba(255,255,255,.025);
+
+    color: #e7ebf0;
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    min-height: 38px;
+
+    transition:
+
+        transform .15s ease,
+
+        background .15s ease,
+
+        border-color .15s ease;
+}
+
+
+.stButton > button:hover {
+
+    transform:
+
+        translateY(-1px);
+
+    border-color:
+
+        rgba(22,119,255,.65);
+
+    background:
+
+        rgba(22,119,255,.10);
+}
+
+
+/* =========================================================================
+   METRICS
+   ========================================================================= */
+
+div[data-testid="stMetric"] {
+
+    background:
+
+        rgba(255,255,255,.035);
+
+    border:
+
+        1px solid
+        rgba(255,255,255,.08);
+
+    border-radius: 9px;
+
+    padding: 9px 12px;
+
+    min-height: 82px;
+}
+
+
+div[data-testid="stMetricLabel"] {
+
+    font-size: 9px !important;
+
+    font-weight: 800 !important;
+
+    letter-spacing: 1px !important;
+}
+
+
+div[data-testid="stMetricValue"] {
+
+    font-weight: 900 !important;
+}
+
+
+/* =========================================================================
+   CONTAINERS
+   ========================================================================= */
+
+div[data-testid="stVerticalBlockBorderWrapper"] {
+
+    border-color:
+
+        rgba(255,255,255,.09) !important;
+
+    border-radius: 9px !important;
+}
+
+
+/* =========================================================================
+   PROGRESS
+   ========================================================================= */
+
+div[data-testid="stProgress"] > div {
+
+    background:
+
+        rgba(255,255,255,.06) !important;
+}
+
+
+div[data-testid="stProgress"] > div > div {
+
+    background:
+
+        linear-gradient(
+            90deg,
+            #e10600,
+            #1677ff,
+            #28c7ff,
+            #f2b84b
+        ) !important;
+}
+
+
+/* =========================================================================
+   CHAT
+   ========================================================================= */
+
+[data-testid="stChatMessage"] {
+
+    background:
+
+        rgba(255,255,255,.025);
+
+    border:
+
+        1px solid
+        rgba(255,255,255,.07);
+
+    border-radius: 9px;
+
+    margin-bottom: 7px;
+}
+
+
+[data-testid="stChatInput"] textarea {
+
+    background:
+
+        #10151d !important;
+
+    color:
+
+        white !important;
+
+    border:
+
+        1px solid
+        rgba(22,119,255,.45) !important;
+
+    border-radius:
+
+        9px !important;
+
+    min-height:
+
+        48px !important;
+}
+
+
+[data-testid="stChatInput"] textarea:focus {
+
+    border-color:
+
+        #f2b84b !important;
+}
+
+
+/* =========================================================================
+   TELEMETRY
+   ========================================================================= */
+
+.sf-telemetry {
+
+    border:
+
+        1px solid
+        rgba(22,119,255,.25);
+
+    border-radius: 10px;
+
+    padding: 14px;
+
+    background:
+
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.035),
+            rgba(22,119,255,.025)
+        );
+
+    margin-top: 8px;
+
+    margin-bottom: 15px;
+}
+
+
+.sf-telemetry-title {
+
+    color: #f2b84b;
+
+    font-size: 11px;
+
+    font-weight: 900;
+
+    letter-spacing: 1.5px;
+
+    margin-bottom: 4px;
+}
+
+
+.sf-telemetry-subtitle {
+
+    color: #7f8a99;
+
+    font-size: 10px;
+
+    margin-bottom: 12px;
+}
+
+
+.sf-telemetry-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 8px;
+}
+
+
+.sf-telemetry-item {
+
+    background:
+
+        rgba(255,255,255,.025);
+
+    border:
+
+        1px solid
+        rgba(255,255,255,.06);
+
+    border-radius: 7px;
+
+    padding: 9px;
+}
+
+
+.sf-telemetry-label {
+
+    color: #748091;
+
+    font-size: 8px;
+
+    font-weight: 800;
+
+    letter-spacing: 1px;
+
+    margin-bottom: 4px;
+}
+
+
+.sf-telemetry-value {
+
+    color: #e8edf3;
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    word-break: break-word;
+}
+
+
+.sf-success {
+
+    color: #39d98a;
+}
+
+
+.sf-fallback {
+
+    color: #f2b84b;
+}
+
+
+/* =========================================================================
+   PIPELINE
+   ========================================================================= */
+
+.sf-stage {
+
+    border:
+
+        1px solid
+        rgba(255,255,255,.08);
+
+    border-radius: 8px;
+
+    padding: 9px 11px;
+
+    margin-bottom: 7px;
+
+    background:
+
+        rgba(255,255,255,.025);
+}
+
+
+.sf-stage-number {
+
+    color: #f2b84b;
+
+    font-size: 10px;
+
+    font-weight: 900;
+
+    margin-right: 8px;
+}
+
+
+/* =========================================================================
+   COMMAND PANEL
+   ========================================================================= */
+
+.sf-panel {
+
+    border:
+
+        1px solid
+        rgba(255,255,255,.08);
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+    background:
+
+        rgba(255,255,255,.025);
+
+    margin-bottom: 12px;
+}
+
+
+.sf-panel-title {
+
+    color: #f4f6f8;
+
+    font-size: 13px;
+
+    font-weight: 900;
+
+    letter-spacing: .8px;
+
+    margin-bottom: 3px;
+}
+
+
+.sf-panel-subtitle {
+
+    color: #7e8998;
+
+    font-size: 10px;
+
+    margin-bottom: 12px;
+}
+
+
+/* =========================================================================
+   FOOTER
+   ========================================================================= */
+
+.sf-footer {
+
+    color: #5f6875;
+
+    font-size: 9px;
+
+    letter-spacing: 1.5px;
+
+    text-align: center;
+
+    margin-top: 25px;
+}
+
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+
+# =============================================================================
+# HELPERS
+# =============================================================================
+
+def files_count() -> int:
+
+    try:
+
+        return sum(
+            1
+            for path in ROOT.rglob("*")
+            if (
+                path.is_file()
+                and ".git" not in path.parts
+                and "__pycache__" not in path.parts
+                and "repair_backups" not in path.parts
+            )
+        )
+
+    except Exception:
+
+        return 0
+
+
+def log_count() -> int:
+
+    try:
+
+        if not LOG_FILE.exists():
+            return 0
+
+        return len(
+            LOG_FILE.read_text(
+                encoding="utf-8",
+                errors="ignore",
+            ).splitlines()
+        )
+
+    except Exception:
+
+        return 0
+
+
+def routing() -> dict[str, Any]:
+
+    try:
+
+        return json.loads(
+            ROUTING_FILE.read_text(
+                encoding="utf-8"
+            )
+        )
+
+    except Exception:
+
+        return {}
+
+
+def load_telemetry() -> dict[str, Any]:
+
+    try:
+
+        if not TELEMETRY_FILE.exists():
+            return {}
+
+        data = json.loads(
+            TELEMETRY_FILE.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        return data if isinstance(data, dict) else {}
+
+    except Exception:
+
+        return {}
+
+
+def capture_telemetry(
+    result: Any,
+) -> dict[str, Any]:
+
+    """
+    Convert the CURRENT backend response into the
+    session telemetry used by the UI.
+
+    This does NOT perform routing.
+
+    It only observes the result returned by the
+    existing AI bridge.
+    """
+
+    telemetry = {}
+
+    if isinstance(result, dict):
+
+        telemetry = {
+            "timestamp": result.get(
+                "timestamp",
+                datetime.now().isoformat(),
+            ),
+
+            "task": result.get(
+                "intent",
+                result.get(
+                    "task",
+                    "CHAT",
+                ),
+            ),
+
+            "intent": result.get(
+                "intent",
+                "CHAT",
+            ),
+
+            "provider": result.get(
+                "provider",
+                "unknown",
+            ),
+
+            "tier": result.get(
+                "tier",
+                "unknown",
+            ),
+
+            "requested_model": result.get(
+                "requested_model",
+                result.get(
+                    "model",
+                    "unknown",
+                ),
+            ),
+
+            "requested_models": result.get(
+                "requested_models",
+                [],
+            ),
+
+            "actual_model": result.get(
+                "actual_model",
+                result.get(
+                    "model",
+                    result.get(
+                        "selected_model",
+                        "unknown",
+                    ),
+                ),
+            ),
+
+            "selected_model": result.get(
+                "selected_model",
+                result.get(
+                    "actual_model",
+                    result.get(
+                        "model",
+                        "unknown",
+                    ),
+                ),
+            ),
+
+            "latency_seconds": result.get(
+                "latency_seconds",
+                result.get(
+                    "elapsed",
+                    0,
+                ),
+            ),
+
+            "status": result.get(
+                "status",
+                "unknown",
+            ),
+
+            "fallback": result.get(
+                "fallback",
+                False,
+            ),
+        }
+
+    if not telemetry:
+
+        telemetry = load_telemetry()
+
+    return telemetry
+
+
+def refresh_telemetry():
+
+    telemetry = load_telemetry()
+
+    if telemetry:
+
+        st.session_state.sf_live_telemetry = (
+            telemetry
+        )
+
+    return telemetry
+
+
+def ask_bankai(
+    prompt: str,
+    force_intent: str | None = None,
+):
+
+    """
+    IMPORTANT:
+
+    This function does NOT implement an AI provider.
+
+    It calls the EXISTING bankai_ai_bridge.
+
+    Therefore the current backend architecture remains
+    untouched:
+
+        UI
+          ↓
+        existing bridge
+          ↓
+        current Ruflo/OpenRouter architecture
+          ↓
+        model fallback
+          ↓
+        telemetry
+    """
+
+    try:
+
+        from app.core.bankai_ai_bridge import (
+            bankai_chat,
+        )
+
+        result = bankai_chat(
+            prompt,
+            conversation=(
+                st.session_state.chat_messages
+            ),
+            force_intent=force_intent,
+        )
+
+        telemetry = capture_telemetry(
+            result
+        )
+
+        if telemetry:
+
+            st.session_state.sf_live_telemetry = (
+                telemetry
+            )
+
+        return result
+
+    except Exception as exc:
+
+        return {
+            "text": (
+                "BANKAI bridge error.\n\n"
+                f"`{type(exc).__name__}: {exc}`"
+            ),
+            "intent": "ERROR",
+            "provider": "none",
+            "model": "none",
+            "status": "error",
+        }
+
+
+def result_text(
+    result: Any,
+) -> str:
+
+    if isinstance(result, dict):
+
+        return (
+            result.get("text")
+            or result.get("response")
+            or result.get("content")
+            or result.get("message")
+            or "BANKAI returned no response."
+        )
+
+    return str(result)
+
+
+def show_result(
+    result: Any,
+):
+
+    st.markdown(
+        result_text(result)
+    )
+
+    if isinstance(result, dict):
+
+        intent = result.get(
+            "intent",
+            "UNKNOWN",
+        )
+
+        provider = result.get(
+            "provider",
+            "UNKNOWN",
+        )
+
+        model = result.get(
+            "model",
+            result.get(
+                "actual_model",
+                "UNKNOWN",
+            ),
+        )
+
+        st.caption(
+            "BANKAI · "
+            f"{intent} · "
+            f"{provider} · "
+            f"{model}"
+        )
+
+
+# =============================================================================
+# TELEMETRY UI
+# =============================================================================
+
+def render_telemetry(
+    telemetry: dict[str, Any] | None = None,
+):
+
+    if not telemetry:
+
+        telemetry = (
+            st.session_state.get(
+                "sf_live_telemetry",
+                {},
+            )
+            or load_telemetry()
+        )
+
+    if not telemetry:
+
+        st.info(
+            "No routing telemetry available yet."
+        )
+
+        return
+
+    intent = (
+        telemetry.get("intent")
+        or telemetry.get("task")
+        or "UNKNOWN"
+    )
+
+    provider = telemetry.get(
+        "provider",
+        "UNKNOWN",
+    )
+
+    tier = telemetry.get(
+        "tier",
+        "UNKNOWN",
+    )
+
+    requested = telemetry.get(
+        "requested_model",
+        "UNKNOWN",
+    )
+
+    actual = (
+        telemetry.get("actual_model")
+        or telemetry.get("selected_model")
+        or telemetry.get("model")
+        or "UNKNOWN"
+    )
+
+    latency = telemetry.get(
+        "latency_seconds",
+        telemetry.get(
+            "elapsed",
+            0,
+        ),
+    )
+
+    status = telemetry.get(
+        "status",
+        "UNKNOWN",
+    )
+
+    fallback = telemetry.get(
+        "fallback",
+        False,
+    )
+
+    if isinstance(latency, (int, float)):
+
+        latency_text = (
+            f"{latency:.2f}s"
+        )
+
+    else:
+
+        latency_text = str(latency)
+
+    fallback_text = (
+        "FALLBACK ACTIVE"
+        if fallback
+        else "PRIMARY"
+    )
+
+    fallback_class = (
+        "sf-fallback"
+        if fallback
+        else "sf-success"
+    )
+
+    st.markdown(
+        f"""
+<div class="sf-telemetry">
+
+    <div class="sf-telemetry-title">
+        📡 LIVE ROUTING TELEMETRY
+    </div>
+
+    <div class="sf-telemetry-subtitle">
+        Latest real SOUL FORGE / BANKAI routing event.
+    </div>
+
+    <div class="sf-telemetry-grid">
+
+        <div class="sf-telemetry-item">
+            <div class="sf-telemetry-label">
+                INTENT
+            </div>
+            <div class="sf-telemetry-value">
+                {intent}
+            </div>
+        </div>
+
+        <div class="sf-telemetry-item">
+            <div class="sf-telemetry-label">
+                PROVIDER
+            </div>
+            <div class="sf-telemetry-value">
+                {provider}
+            </div>
+        </div>
+
+        <div class="sf-telemetry-item">
+            <div class="sf-telemetry-label">
+                TIER
+            </div>
+            <div class="sf-telemetry-value">
+                {tier}
+            </div>
+        </div>
+
+        <div class="sf-telemetry-item">
+            <div class="sf-telemetry-label">
+                STATUS
+            </div>
+            <div class="sf-telemetry-value sf-success">
+                {status}
+            </div>
+        </div>
+
+        <div class="sf-telemetry-item">
+            <div class="sf-telemetry-label">
+                REQUESTED MODEL
+            </div>
+            <div class="sf-telemetry-value">
+                {requested}
+            </div>
+        </div>
+
+        <div class="sf-telemetry-item">
+            <div class="sf-telemetry-label">
+                ACTUAL MODEL
+            </div>
+            <div class="sf-telemetry-value">
+                {actual}
+            </div>
+        </div>
+
+        <div class="sf-telemetry-item">
+            <div class="sf-telemetry-label">
+                LATENCY
+            </div>
+            <div class="sf-telemetry-value">
+                {latency_text}
+            </div>
+        </div>
+
+        <div class="sf-telemetry-item">
+            <div class="sf-telemetry-label">
+                ROUTING
+            </div>
+            <div class="sf-telemetry-value {fallback_class}">
+                {fallback_text}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+# =============================================================================
+# HEADER
+# =============================================================================
+
+left, right = st.columns(
+    [5, 1],
+    vertical_alignment="center",
+)
+
+with left:
+
+    st.markdown(
+        '<div class="bankai-kicker">'
+        'RACE CONTROL // AI COMMAND SYSTEM'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="bankai-title">'
+        '🏎️ BANKAI RACE CONTROL'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="bankai-subtitle">'
+        'BLEACH × F1 × AGENTIC AI'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+with right:
+
+    st.markdown(
+        '<div class="bankai-online">'
+        '● SYSTEM ONLINE'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.caption(
+        datetime.now().strftime(
+            "%H:%M:%S"
+        )
+    )
+
+
+# =============================================================================
+# NAVIGATION
+# =============================================================================
+
+pages = [
+    "HOME",
+    "CHAT",
+    "AGENTIC AI",
+    "CODER",
+    "KNOWLEDGE",
+    "MODELS",
+    "RADIO",
+    "FOCUS",
+    "SYSTEM",
+]
+
+st.divider()
+
+nav = st.columns(
+    len(pages)
+)
+
+for column, page in zip(
+    nav,
+    pages,
+):
+
+    with column:
+
+        if st.button(
+            page,
+            key=f"nav_{page}",
+            use_container_width=True,
+        ):
+
+            st.session_state.page = page
+
+            st.rerun()
+
+
+# =============================================================================
+# TOP METRICS
+# =============================================================================
+
+a, b, c, d = st.columns(4)
+
+with a:
+
+    st.metric(
+        "AI CORE",
+        "READY",
+        "SOUL FORGE",
+    )
+
+with b:
+
+    st.metric(
+        "AGENTIC ENGINE",
+        "READY",
+        "6 STAGES",
+    )
+
+with c:
+
+    st.metric(
+        "PROJECT FILES",
+        files_count(),
+    )
+
+with d:
+
+    st.metric(
+        "LOG EVENTS",
+        log_count(),
+    )
+
+
+st.write("")
+
+
+# =============================================================================
+# HOME
+# =============================================================================
+
+if st.session_state.page == "HOME":
+
+    st.subheader(
+        "COMMAND CENTER"
+    )
+
+    st.caption(
+        "Central BANKAI operating dashboard."
+    )
+
+    left, center, right = st.columns(
+        [1.05, 1.8, 1.05]
+    )
+
+    # -------------------------------------------------------------------------
+    # SYSTEM
+    # -------------------------------------------------------------------------
+
+    with left:
+
+        st.markdown(
+            "### ⚡ SYSTEM"
+        )
+
+        with st.container(
+            border=True
+        ):
+
+            st.metric(
+                "CORE",
+                "ONLINE",
+            )
+
+            st.progress(
+                0.94
+            )
+
+            st.caption(
+                "BANKAI AI communication layer"
+            )
+
+        st.markdown(
+            "### 📡 SIGNALS"
+        )
+
+        for name, status in [
+
+            (
+                "AI BRIDGE",
+                "READY",
+            ),
+
+            (
+                "AGENTIC AI",
+                "READY",
+            ),
+
+            (
+                "RUFLO",
+                "ACTIVE",
+            ),
+
+            (
+                "OPENROUTER",
+                "ACTIVE",
+            ),
+
+            (
+                "MODEL ROUTING",
+                "ACTIVE",
+            ),
+
+            (
+                "PROJECT",
+                "FOUND",
+            ),
+
+        ]:
+
+            with st.container(
+                border=True
+            ):
+
+                st.write(
+                    f"**{name}**"
+                )
+
+                st.caption(
+                    status
+                )
+
+    # -------------------------------------------------------------------------
+    # COGNITIVE CORE
+    # -------------------------------------------------------------------------
+
+    with center:
+
+        st.markdown(
+            "### 🧠 BANKAI COGNITIVE CORE"
+        )
+
+        st.caption(
+            "Current intelligence modules"
+        )
+
+        modules = [
+
+            (
+                "Conversation",
+                .94,
+            ),
+
+            (
+                "Planning",
+                .88,
+            ),
+
+            (
+                "Coding",
+                .86,
+            ),
+
+            (
+                "Knowledge",
+                .80,
+            ),
+
+            (
+                "Agentic Reasoning",
+                .92,
+            ),
+
+        ]
+
+        for name, value in modules:
+
+            st.write(
+                f"**{name}** · "
+                f"{int(value * 100)}%"
+            )
+
+            st.progress(
+                value
+            )
+
+        with st.container(
+            border=True
+        ):
+
+            st.markdown(
+                "### 🎯 ACTIVE MISSION"
+            )
+
+            st.write(
+                st.session_state.mission
+            )
+
+            if st.button(
+                "OPEN AGENTIC AI",
+                use_container_width=True,
+            ):
+
+                st.session_state.page = (
+                    "AGENTIC AI"
+                )
+
+                st.rerun()
+
+    # -------------------------------------------------------------------------
+    # AI MODES
+    # -------------------------------------------------------------------------
+
+    with right:
+
+        st.markdown(
+            "### 🤖 AI MODES"
+        )
+
+        modes = [
+
+            (
+                "CHAT",
+                "Conversation",
+            ),
+
+            (
+                "PLANNING",
+                "Architecture",
+            ),
+
+            (
+                "CODING",
+                "Implementation",
+            ),
+
+            (
+                "KNOWLEDGE",
+                "Research",
+            ),
+
+            (
+                "AGENTIC",
+                "Complete workflow",
+            ),
+
+        ]
+
+        for name, description in modes:
+
+            with st.container(
+                border=True
+            ):
+
+                st.write(
+                    f"**{name}**"
+                )
+
+                st.caption(
+                    description
+                )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# CHAT
+# =============================================================================
+
+elif st.session_state.page == "CHAT":
+
+    st.subheader(
+        "💬 BANKAI CHAT"
+    )
+
+    st.caption(
+        "General conversation with automatic AI routing."
+    )
+
+    if not st.session_state.chat_messages:
+
+        st.info(
+            "Ask BANKAI anything or give it a project command."
+        )
+
+    for message in (
+        st.session_state.chat_messages
+    ):
+
+        with st.chat_message(
+            message["role"]
+        ):
+
+            st.markdown(
+                message["content"]
+            )
+
+            if message.get("intent"):
+
+                st.caption(
+                    f"ROUTED · "
+                    f"{message['intent']}"
+                )
+
+    st.divider()
+
+    st.subheader(
+        "📡 LIVE ROUTING TELEMETRY"
+    )
+
+    render_telemetry()
+
+
+# =============================================================================
+# AGENTIC AI
+# =============================================================================
+
+elif st.session_state.page == "AGENTIC AI":
+
+    st.subheader(
+        "🤖 BANKAI AGENTIC AI"
+    )
+
+    st.caption(
+        "One agent owns planning, implementation, validation and review."
+    )
+
+    st.info(
+        "UNDERSTAND → PLAN → IMPLEMENT → "
+        "VALIDATE → REVIEW → FINALIZE"
+    )
+
+    left, right = st.columns(
+        [1.7, 1]
+    )
+
+    with left:
+
+        mission = st.text_area(
+            "MISSION",
+            placeholder=(
+                "Tell BANKAI what you want to accomplish..."
+            ),
+            height=190,
+        )
+
+        if st.button(
+            "🚀 START AGENTIC MISSION",
+            use_container_width=True,
+        ):
+
+            if mission.strip():
+
+                st.session_state.mission = (
+                    mission[:100]
+                )
+
+                with st.spinner(
+                    "BANKAI AGENTIC AI WORKING..."
+                ):
+
+                    result = ask_bankai(
+                        mission,
+                        force_intent="AGENTIC",
+                    )
+
+                show_result(
+                    result
+                )
+
+                if isinstance(
+                    result,
+                    dict,
+                ):
+
+                    if result.get(
+                        "stages"
+                    ):
+
+                        with st.expander(
+                            "AGENT INTERNAL ANALYSIS"
+                        ):
+
+                            stages = result[
+                                "stages"
+                            ]
+
+                            st.markdown(
+                                "#### PLAN"
+                            )
+
+                            st.markdown(
+                                stages.get(
+                                    "plan",
+                                    "",
+                                )
+                            )
+
+                            st.markdown(
+                                "#### IMPLEMENTATION"
+                            )
+
+                            st.markdown(
+                                stages.get(
+                                    "implementation",
+                                    "",
+                                )
+                            )
+
+                            st.markdown(
+                                "#### VALIDATION"
+                            )
+
+                            st.markdown(
+                                stages.get(
+                                    "validation",
+                                    "",
+                                )
+                            )
+
+                            st.markdown(
+                                "#### INTERNAL REVIEW"
+                            )
+
+                            st.markdown(
+                                stages.get(
+                                    "review",
+                                    "",
+                                )
+                            )
+
+    with right:
+
+        st.markdown(
+            "### PIPELINE"
+        )
+
+        stages = [
+
+            (
+                "01",
+                "UNDERSTAND",
+            ),
+
+            (
+                "02",
+                "PLAN",
+            ),
+
+            (
+                "03",
+                "IMPLEMENT",
+            ),
+
+            (
+                "04",
+                "VALIDATE",
+            ),
+
+            (
+                "05",
+                "REVIEW",
+            ),
+
+            (
+                "06",
+                "FINALIZE",
+            ),
+
+        ]
+
+        for number, stage in stages:
+
+            st.markdown(
+                f"""
+<div class="sf-stage">
+    <span class="sf-stage-number">
+        {number}
+    </span>
+    <strong>{stage}</strong>
+</div>
+""",
+                unsafe_allow_html=True,
+            )
+
+        st.caption(
+            "Validation and review remain internal "
+            "Agentic AI responsibilities."
+        )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# CODER
+# =============================================================================
+
+elif st.session_state.page == "CODER":
+
+    st.subheader(
+        "💻 BANKAI CODER"
+    )
+
+    st.caption(
+        "Dedicated software implementation workspace."
+    )
+
+    request = st.text_area(
+        "CODING REQUEST",
+        placeholder=(
+            "Describe the code you want BANKAI "
+            "to create or modify..."
+        ),
+        height=220,
+    )
+
+    if st.button(
+        "GENERATE CODE",
+        use_container_width=True,
+    ):
+
+        if request.strip():
+
+            with st.spinner(
+                "BANKAI CODER..."
+            ):
+
+                result = ask_bankai(
+                    request,
+                    force_intent="CODING",
+                )
+
+            show_result(
+                result
+            )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# KNOWLEDGE
+# =============================================================================
+
+elif st.session_state.page == "KNOWLEDGE":
+
+    st.subheader(
+        "📚 BANKAI KNOWLEDGE"
+    )
+
+    st.caption(
+        "Research and technical knowledge interface."
+    )
+
+    question = st.text_area(
+        "QUESTION",
+        placeholder=(
+            "Ask BANKAI to explain or analyze something..."
+        ),
+        height=170,
+    )
+
+    if st.button(
+        "ASK BANKAI",
+        use_container_width=True,
+    ):
+
+        if question.strip():
+
+            with st.spinner(
+                "BANKAI KNOWLEDGE..."
+            ):
+
+                result = ask_bankai(
+                    question,
+                    force_intent="KNOWLEDGE",
+                )
+
+            show_result(
+                result
+            )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# MODELS
+# =============================================================================
+
+elif st.session_state.page == "MODELS":
+
+    st.subheader(
+        "🤖 MODEL CONTROL"
+    )
+
+    st.caption(
+        "Current routing configuration."
+    )
+
+    data = routing()
+
+    agents = data.get(
+        "agents",
+        {},
+    )
+
+    if agents:
+
+        for name, config in agents.items():
+
+            with st.container(
+                border=True
+            ):
+
+                st.write(
+                    f"**{name.upper()}**"
+                )
+
+                st.caption(
+                    config.get(
+                        "role",
+                        "",
+                    )
+                )
+
+                st.write(
+                    "Provider: "
+                    f"`{config.get('provider', 'unknown')}`"
+                )
+
+                st.write(
+                    "Model: "
+                    f"`{config.get('model', 'unknown')}`"
+                )
+
+    else:
+
+        st.info(
+            "Current model routing configuration "
+            "is not available."
+        )
+
+    st.divider()
+
+    st.markdown(
+        "### AGENTIC PIPELINE"
+    )
+
+    pipeline = data.get(
+        "agentic_pipeline",
+        [],
+    )
+
+    if pipeline:
+
+        st.write(
+            " → ".join(pipeline)
+        )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# RADIO
+# =============================================================================
+
+elif st.session_state.page == "RADIO":
+
+    st.subheader(
+        "📡 RACE RADIO"
+    )
+
+    st.caption(
+        "BANKAI system telemetry and routing status."
+    )
+
+    signals = [
+
+        (
+            "SYSTEM",
+            "ONLINE",
+        ),
+
+        (
+            "AI BRIDGE",
+            "READY",
+        ),
+
+        (
+            "RUFLO",
+            "ACTIVE",
+        ),
+
+        (
+            "OPENROUTER",
+            "ACTIVE",
+        ),
+
+        (
+            "MODEL ROUTING",
+            "ACTIVE",
+        ),
+
+        (
+            "LIVE TELEMETRY",
+            "ACTIVE",
+        ),
+
+    ]
+
+    for name, status in signals:
+
+        with st.container(
+            border=True
+        ):
+
+            st.write(
+                f"**{name}**"
+            )
+
+            st.caption(
+                status
+            )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# FOCUS
+# =============================================================================
+
+elif st.session_state.page == "FOCUS":
+
+    st.subheader(
+        "🎯 FOCUS MODE"
+    )
+
+    st.caption(
+        "Current project mission."
+    )
+
+    st.session_state.mission = st.text_input(
+        "CURRENT MISSION",
+        value=st.session_state.mission,
+    )
+
+    st.progress(
+        0.42
+    )
+
+    st.metric(
+        "MISSION STATUS",
+        "ACTIVE",
+        "42%",
+    )
+
+    if st.button(
+        "RESET MISSION",
+        use_container_width=True,
+    ):
+
+        st.session_state.mission = (
+            "SYSTEM STANDBY"
+        )
+
+        st.rerun()
+
+
+# =============================================================================
+# SYSTEM
+# =============================================================================
+
+elif st.session_state.page == "SYSTEM":
+
+    st.subheader(
+        "⚙ SYSTEM"
+    )
+
+    st.caption(
+        "SOUL FORGE runtime integrity."
+    )
+
+    checks = [
+
+        (
+            "PROJECT",
+            ROOT.exists(),
+        ),
+
+        (
+            "AI BRIDGE",
+            BRIDGE.exists(),
+        ),
+
+        (
+            "RUFLO ENGINE",
+            RUFLO.exists(),
+        ),
+
+        (
+            "OPENROUTER PROVIDER",
+            OPENROUTER.exists(),
+        ),
+
+        (
+            "ROUTING",
+            ROUTING_FILE.exists(),
+        ),
+
+        (
+            "TELEMETRY",
+            TELEMETRY_FILE.exists(),
+        ),
+
+        (
+            "UI",
+            True,
+        ),
+
+    ]
+
+    for name, status in checks:
+
+        if status:
+
+            st.success(
+                f"{name} · READY"
+            )
+
+        else:
+
+            st.error(
+                f"{name} · CHECK"
+            )
+
+    st.divider()
+
+    st.write(
+        "**Project:**",
+        str(ROOT),
+    )
+
+    st.write(
+        "**Files:**",
+        files_count(),
+    )
+
+    st.write(
+        "**Log events:**",
+        log_count(),
+    )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# GLOBAL CHAT BAR
+# =============================================================================
+
+st.divider()
+
+st.caption(
+    "BANKAI QUICK COMMAND · AVAILABLE EVERYWHERE"
+)
+
+prompt = st.chat_input(
+    "Talk to BANKAI or give it a command..."
+)
+
+if prompt:
+
+    st.session_state.chat_messages.append(
+        {
+            "role": "user",
+            "content": prompt,
+            "intent": "PENDING",
+        }
+    )
+
+    with st.spinner(
+        "BANKAI THINKING..."
+    ):
+
+        result = ask_bankai(
+            prompt
+        )
+
+    result_intent = (
+        result.get(
+            "intent",
+            "CHAT",
+        )
+        if isinstance(
+            result,
+            dict,
+        )
+        else "CHAT"
+    )
+
+    st.session_state.chat_messages[
+        -1
+    ].update(
+        {
+            "intent": result_intent
+        }
+    )
+
+    st.session_state.chat_messages.append(
+        {
+            "role": "assistant",
+            "content": result_text(
+                result
+            ),
+            "intent": result_intent,
+            "model": (
+                result.get(
+                    "model",
+                    result.get(
+                        "actual_model",
+                        "",
+                    ),
+                )
+                if isinstance(
+                    result,
+                    dict,
+                )
+                else ""
+            ),
+        }
+    )
+
+    st.rerun()
+
+
+# =============================================================================
+# FOOTER
+# =============================================================================
+
+st.markdown(
+    """
+<div class="sf-footer">
+    BANKAI RACE CONTROL · AGENTIC AI COMMAND SYSTEM
+    <br>
+    RUFLO · OPENROUTER · MULTI-MODEL ROUTING · LIVE TELEMETRY
+</div>
+""",
+    unsafe_allow_html=True,
+)

@@ -1,0 +1,1939 @@
+
+from pathlib import Path
+from datetime import datetime
+import time
+import json
+
+import streamlit as st
+
+
+# =============================================================================
+# SOUL FORGE
+# PERSONAL AGENTIC AI DEVELOPMENT PLATFORM
+# COMPACT BLEACH × RED BULL RACING UI
+# =============================================================================
+
+
+PROJECT_ROOT = Path(
+    "/content/BANKAI-RACE-CONTROL"
+)
+
+TELEMETRY_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "last_routing_telemetry.json"
+)
+
+ROUTING_FILE = (
+    PROJECT_ROOT
+    / "config"
+    / "bankai_model_routing.json"
+)
+
+LOG_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "v068_ui.log"
+)
+
+
+# =============================================================================
+# PAGE
+# =============================================================================
+
+st.set_page_config(
+    page_title="SOUL FORGE",
+    page_icon="⚔️",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+
+# =============================================================================
+# SESSION STATE
+# =============================================================================
+
+defaults = {
+
+    "page": "Command Center",
+
+    "selected_project":
+        "BANKAI-RACE-CONTROL",
+
+    "chat_messages": [],
+
+    "agentic_result": None,
+
+    "agentic_prompt": "",
+
+    "agentic_user_tested": False,
+
+    "agentic_accepted": False,
+
+    "mission":
+        "SYSTEM STANDBY",
+
+    "pit_running": False,
+
+    "pit_started_at": None,
+
+    "pit_elapsed": 0.0,
+
+    "pit_lap": 1,
+
+    "sf_live_telemetry": {},
+
+}
+
+for key, value in defaults.items():
+
+    if key not in st.session_state:
+
+        st.session_state[key] = value
+
+
+# =============================================================================
+# BACKEND
+# =============================================================================
+
+def bankai_request(
+    prompt,
+    intent=None,
+):
+    """
+    IMPORTANT:
+
+    The UI does not directly instantiate Ollama,
+    Ruflo, or OpenRouter.
+
+    It calls the existing production AI bridge.
+
+    Current architecture:
+
+        UI
+          ↓
+        bankai_ai_bridge
+          ↓
+        RUFLO
+          ↓
+        OPENROUTER
+          ↓
+        MODEL FALLBACK
+          ↓
+        TELEMETRY
+    """
+
+    try:
+
+        from app.core.bankai_ai_bridge import (
+            bankai_chat,
+        )
+
+        kwargs = {}
+
+        if intent:
+
+            kwargs["force_intent"] = intent
+
+        result = bankai_chat(
+            prompt,
+            **kwargs,
+        )
+
+        telemetry = {}
+
+        if isinstance(result, dict):
+
+            telemetry = {
+
+                "timestamp":
+                    result.get(
+                        "timestamp",
+                        datetime.now().isoformat(),
+                    ),
+
+                "intent":
+                    result.get(
+                        "intent",
+                        intent or "CHAT",
+                    ),
+
+                "task":
+                    result.get(
+                        "task",
+                        result.get(
+                            "intent",
+                            intent or "CHAT",
+                        ),
+                    ),
+
+                "provider":
+                    result.get(
+                        "provider",
+                        "unknown",
+                    ),
+
+                "tier":
+                    result.get(
+                        "tier",
+                        "unknown",
+                    ),
+
+                "requested_model":
+                    result.get(
+                        "requested_model",
+                        "unknown",
+                    ),
+
+                "requested_models":
+                    result.get(
+                        "requested_models",
+                        [],
+                    ),
+
+                "actual_model":
+                    result.get(
+                        "actual_model",
+                        result.get(
+                            "selected_model",
+                            result.get(
+                                "model",
+                                "unknown",
+                            ),
+                        ),
+                    ),
+
+                "selected_model":
+                    result.get(
+                        "selected_model",
+                        result.get(
+                            "actual_model",
+                            result.get(
+                                "model",
+                                "unknown",
+                            ),
+                        ),
+                    ),
+
+                "latency_seconds":
+                    result.get(
+                        "latency_seconds",
+                        result.get(
+                            "elapsed",
+                            0,
+                        ),
+                    ),
+
+                "status":
+                    result.get(
+                        "status",
+                        "unknown",
+                    ),
+
+                "fallback":
+                    result.get(
+                        "fallback",
+                        False,
+                    ),
+
+            }
+
+            st.session_state.sf_live_telemetry = (
+                telemetry
+            )
+
+        return result
+
+    except Exception as exc:
+
+        return {
+
+            "text":
+                (
+                    "BANKAI AI BRIDGE ERROR\n\n"
+                    f"{type(exc).__name__}: {exc}"
+                ),
+
+            "intent":
+                intent or "ERROR",
+
+            "provider":
+                "none",
+
+            "model":
+                "none",
+
+            "status":
+                "error",
+
+        }
+
+
+# =============================================================================
+# RESULT
+# =============================================================================
+
+def result_text(result):
+
+    if isinstance(result, dict):
+
+        return (
+            result.get("text")
+            or result.get("response")
+            or result.get("content")
+            or result.get("message")
+            or "BANKAI returned no response."
+        )
+
+    return str(result)
+
+
+def show_result(result):
+
+    st.write(
+        result_text(result)
+    )
+
+    if isinstance(result, dict):
+
+        intent = result.get(
+            "intent",
+            "UNKNOWN",
+        )
+
+        provider = result.get(
+            "provider",
+            "UNKNOWN",
+        )
+
+        model = result.get(
+            "actual_model",
+            result.get(
+                "selected_model",
+                result.get(
+                    "model",
+                    "UNKNOWN",
+                ),
+            ),
+        )
+
+        st.caption(
+            f"ROUTED · {intent} · "
+            f"{provider} · {model}"
+        )
+
+
+# =============================================================================
+# TELEMETRY
+# =============================================================================
+
+def load_telemetry():
+
+    try:
+
+        if not TELEMETRY_FILE.exists():
+
+            return {}
+
+        data = json.loads(
+            TELEMETRY_FILE.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        return (
+            data
+            if isinstance(data, dict)
+            else {}
+        )
+
+    except Exception:
+
+        return {}
+
+
+def refresh_telemetry():
+
+    telemetry = load_telemetry()
+
+    if telemetry:
+
+        st.session_state.sf_live_telemetry = (
+            telemetry
+        )
+
+    return telemetry
+
+
+def render_telemetry():
+
+    telemetry = (
+        st.session_state.get(
+            "sf_live_telemetry",
+            {},
+        )
+        or load_telemetry()
+    )
+
+    st.subheader(
+        "📡 LIVE ROUTING TELEMETRY"
+    )
+
+    st.caption(
+        "Real-time RUFLO + OpenRouter routing information."
+    )
+
+    if not telemetry:
+
+        st.info(
+            "No routing telemetry available yet."
+        )
+
+        return
+
+    intent = (
+        telemetry.get("intent")
+        or telemetry.get("task")
+        or "UNKNOWN"
+    )
+
+    provider = telemetry.get(
+        "provider",
+        "UNKNOWN",
+    )
+
+    tier = telemetry.get(
+        "tier",
+        "UNKNOWN",
+    )
+
+    status = telemetry.get(
+        "status",
+        "UNKNOWN",
+    )
+
+    requested_model = telemetry.get(
+        "requested_model",
+        "UNKNOWN",
+    )
+
+    actual_model = (
+        telemetry.get("actual_model")
+        or telemetry.get("selected_model")
+        or telemetry.get("model")
+        or "UNKNOWN"
+    )
+
+    latency = telemetry.get(
+        "latency_seconds",
+        telemetry.get(
+            "elapsed",
+            0,
+        ),
+    )
+
+    fallback = telemetry.get(
+        "fallback",
+        False,
+    )
+
+    if isinstance(
+        latency,
+        (int, float),
+    ):
+
+        latency_display = (
+            f"{latency:.2f}s"
+        )
+
+    else:
+
+        latency_display = str(latency)
+
+    routing = (
+        "FALLBACK"
+        if fallback
+        else "PRIMARY"
+    )
+
+    c1, c2, c3, c4 = st.columns(
+        4,
+        gap="small",
+    )
+
+    with c1:
+
+        st.metric(
+            "INTENT",
+            str(intent),
+        )
+
+    with c2:
+
+        st.metric(
+            "PROVIDER",
+            str(provider),
+        )
+
+    with c3:
+
+        st.metric(
+            "TIER",
+            str(tier),
+        )
+
+    with c4:
+
+        st.metric(
+            "STATUS",
+            str(status),
+        )
+
+    c1, c2, c3, c4 = st.columns(
+        4,
+        gap="small",
+    )
+
+    with c1:
+
+        st.metric(
+            "REQUESTED MODEL",
+            str(requested_model),
+        )
+
+    with c2:
+
+        st.metric(
+            "ACTUAL MODEL",
+            str(actual_model),
+        )
+
+    with c3:
+
+        st.metric(
+            "LATENCY",
+            latency_display,
+        )
+
+    with c4:
+
+        st.metric(
+            "ROUTING",
+            routing,
+        )
+
+    requested_models = telemetry.get(
+        "requested_models",
+        [],
+    )
+
+    if requested_models:
+
+        with st.expander(
+            "MODEL FALLBACK CHAIN",
+            expanded=False,
+        ):
+
+            for index, model in enumerate(
+                requested_models,
+                start=1,
+            ):
+
+                st.write(
+                    f"{index}. `{model}`"
+                )
+
+    timestamp = telemetry.get(
+        "timestamp"
+    )
+
+    if timestamp:
+
+        st.caption(
+            f"Last telemetry event: {timestamp}"
+        )
+
+
+# =============================================================================
+# PROJECT / TASK HELPERS
+# =============================================================================
+
+def get_tasks():
+
+    try:
+
+        from app.tasks.task_manager import (
+            TaskManager,
+        )
+
+        manager = TaskManager()
+
+        pending = manager.pending()
+        completed = manager.completed()
+
+        return (
+            pending or [],
+            completed or [],
+        )
+
+    except Exception:
+
+        return [], []
+
+
+def project_name():
+
+    return st.session_state.get(
+        "selected_project",
+        "BANKAI-RACE-CONTROL",
+    )
+
+
+def task_value(
+    task,
+    key,
+    default="",
+):
+
+    if isinstance(task, dict):
+
+        return task.get(
+            key,
+            default,
+        )
+
+    return getattr(
+        task,
+        key,
+        default,
+    )
+
+
+def format_seconds(seconds):
+
+    seconds = max(
+        0,
+        int(seconds),
+    )
+
+    minutes = seconds // 60
+
+    secs = seconds % 60
+
+    return (
+        f"{minutes:02d}:{secs:02d}"
+    )
+
+
+def project_files():
+
+    try:
+
+        return sum(
+
+            1
+
+            for path in PROJECT_ROOT.rglob("*")
+
+            if (
+                path.is_file()
+                and ".git" not in path.parts
+                and "__pycache__" not in path.parts
+                and "repair_backups" not in path.parts
+            )
+
+        )
+
+    except Exception:
+
+        return 0
+
+
+def log_events():
+
+    try:
+
+        if not LOG_FILE.exists():
+
+            return 0
+
+        return len(
+            LOG_FILE.read_text(
+                encoding="utf-8",
+                errors="ignore",
+            ).splitlines()
+        )
+
+    except Exception:
+
+        return 0
+
+
+# =============================================================================
+# HEADER
+# =============================================================================
+
+header_left, header_right = st.columns(
+    [5, 1],
+    gap="small",
+)
+
+with header_left:
+
+    st.title(
+        "⚔️ SOUL FORGE"
+    )
+
+    st.caption(
+        "Personal Agentic AI Development Platform"
+    )
+
+    st.caption(
+        "BLEACH × RED BULL RACING  •  "
+        "BUILD WITH DISCIPLINE  •  "
+        "SHIP WITH CONTROL"
+    )
+
+with header_right:
+
+    st.metric(
+        "SYSTEM",
+        "ONLINE",
+    )
+
+    st.caption(
+        datetime.now().strftime(
+            "%H:%M:%S"
+        )
+    )
+
+
+# =============================================================================
+# MOTIVATION
+# =============================================================================
+
+MOTIVATION = [
+
+    (
+        "BLEACH INSPIRED",
+        "A blade becomes stronger through discipline, repetition, and resolve.",
+    ),
+
+    (
+        "RACING MINDSET",
+        "Stay focused on the next lap. Improve the next decision.",
+    ),
+
+    (
+        "MAX-INSPIRED",
+        "Pressure is part of racing. The goal is to keep improving anyway.",
+    ),
+
+    (
+        "SOUL FORGE",
+        "Don't wait for perfect conditions. Forge the next step.",
+    ),
+
+]
+
+if "quote_index" not in st.session_state:
+
+    st.session_state.quote_index = 0
+
+quote_title, quote_text = MOTIVATION[
+    st.session_state.quote_index
+    % len(MOTIVATION)
+]
+
+st.info(
+    f"**{quote_title}**  —  {quote_text}"
+)
+
+
+# =============================================================================
+# TOP TASKBAR
+# =============================================================================
+
+PAGES = [
+
+    ("🏠", "Command Center"),
+
+    ("📁", "Projects"),
+
+    ("📚", "Knowledge"),
+
+    ("💬", "Chat"),
+
+    ("🤖", "Agentic AI"),
+
+    ("⏱️", "PITMYDORO"),
+
+]
+
+nav_columns = st.columns(
+    len(PAGES),
+    gap="small",
+)
+
+for column, (emoji, page_name) in zip(
+    nav_columns,
+    PAGES,
+):
+
+    with column:
+
+        if st.button(
+            f"{emoji} {page_name}",
+            key=f"nav_{page_name}",
+            use_container_width=True,
+            type=(
+                "primary"
+                if st.session_state.page == page_name
+                else "secondary"
+            ),
+        ):
+
+            st.session_state.page = page_name
+
+            st.rerun()
+
+
+st.divider()
+
+
+# =============================================================================
+# COMMAND CENTER
+# =============================================================================
+
+def render_command_center():
+
+    st.subheader(
+        "🏠 Command Center"
+    )
+
+    pending, completed = get_tasks()
+
+    total = (
+        len(pending)
+        + len(completed)
+    )
+
+    progress = (
+        len(completed) / total
+        if total
+        else 0.0
+    )
+
+    c1, c2, c3, c4 = st.columns(
+        4,
+        gap="small",
+    )
+
+    with c1:
+
+        st.metric(
+            "TASKS",
+            len(pending),
+        )
+
+    with c2:
+
+        st.metric(
+            "DONE",
+            len(completed),
+        )
+
+    with c3:
+
+        st.metric(
+            "PROJECT",
+            project_name(),
+        )
+
+    with c4:
+
+        st.metric(
+            "PROGRESS",
+            f"{progress * 100:.0f}%",
+        )
+
+    st.progress(
+        progress
+    )
+
+    st.markdown(
+        "### ⚡ Today's Work"
+    )
+
+    if not pending:
+
+        st.success(
+            "No pending tasks. Create your next mission below."
+        )
+
+    else:
+
+        for task in pending[:8]:
+
+            title = task_value(
+                task,
+                "title",
+                "Untitled task",
+            )
+
+            priority = task_value(
+                task,
+                "priority",
+                "NORMAL",
+            )
+
+            project = task_value(
+                task,
+                "project",
+                project_name(),
+            )
+
+            with st.container(
+                border=True
+            ):
+
+                c1, c2, c3 = st.columns(
+                    [6, 1.5, 1.5],
+                    gap="small",
+                )
+
+                with c1:
+
+                    st.write(
+                        f"**{title}**"
+                    )
+
+                    st.caption(
+                        project
+                    )
+
+                with c2:
+
+                    st.caption(
+                        "PRIORITY"
+                    )
+
+                    st.write(
+                        str(priority).upper()
+                    )
+
+                with c3:
+
+                    task_id = task_value(
+                        task,
+                        "id",
+                        None,
+                    )
+
+                    if st.button(
+                        "✓ Done",
+                        key=f"complete_{task_id}",
+                        use_container_width=True,
+                    ):
+
+                        try:
+
+                            from app.tasks.task_manager import (
+                                TaskManager,
+                            )
+
+                            manager = (
+                                TaskManager()
+                            )
+
+                            manager.complete(
+                                task_id
+                            )
+
+                            st.rerun()
+
+                        except Exception as exc:
+
+                            st.error(
+                                str(exc)
+                            )
+
+    st.markdown(
+        "### ➕ New Task"
+    )
+
+    with st.form(
+        "new_task_form",
+        clear_on_submit=True,
+    ):
+
+        c1, c2, c3 = st.columns(
+            [5, 2, 1.5],
+            gap="small",
+        )
+
+        with c1:
+
+            title = st.text_input(
+                "Task",
+                placeholder=(
+                    "What needs to be done?"
+                ),
+                label_visibility="collapsed",
+            )
+
+        with c2:
+
+            priority = st.selectbox(
+                "Priority",
+                [
+                    "HIGH",
+                    "MEDIUM",
+                    "LOW",
+                ],
+                label_visibility="collapsed",
+            )
+
+        with c3:
+
+            submit = st.form_submit_button(
+                "ADD",
+                use_container_width=True,
+            )
+
+        if submit and title.strip():
+
+            try:
+
+                from app.tasks.task_manager import (
+                    TaskManager,
+                )
+
+                manager = TaskManager()
+
+                manager.add(
+                    title.strip(),
+                    project_name(),
+                    priority,
+                )
+
+                st.success(
+                    "Task added."
+                )
+
+                st.rerun()
+
+            except Exception as exc:
+
+                st.error(
+                    f"Task error: {exc}"
+                )
+
+    st.markdown(
+        "### 🎯 Next Action"
+    )
+
+    st.warning(
+        f"Current project: **{project_name()}**  •  "
+        "Keep the next action small and executable."
+    )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# PROJECTS
+# =============================================================================
+
+def render_projects():
+
+    st.subheader(
+        "📁 Projects"
+    )
+
+    st.caption(
+        "Your development workspace."
+    )
+
+    projects = [
+
+        "BANKAI-RACE-CONTROL",
+
+        "Einstain-ai-brain-v2",
+
+    ]
+
+    current = project_name()
+
+    selected = st.selectbox(
+        "Current Project",
+        projects,
+        index=(
+            projects.index(current)
+            if current in projects
+            else 0
+        ),
+    )
+
+    if selected != current:
+
+        st.session_state.selected_project = (
+            selected
+        )
+
+        st.rerun()
+
+    c1, c2, c3 = st.columns(
+        3,
+        gap="small",
+    )
+
+    with c1:
+
+        st.metric(
+            "PROJECT",
+            selected,
+        )
+
+    with c2:
+
+        st.metric(
+            "MODE",
+            "DEVELOPMENT",
+        )
+
+    with c3:
+
+        st.metric(
+            "FILES",
+            project_files(),
+        )
+
+    st.markdown(
+        "### 🔍 Project Signals"
+    )
+
+    signals = [
+
+        (
+            "Repository",
+            "Connected locally",
+        ),
+
+        (
+            "AI Architecture",
+            "RUFLO + OPENROUTER",
+        ),
+
+        (
+            "Model Routing",
+            "MULTI-MODEL FALLBACK",
+        ),
+
+        (
+            "Telemetry",
+            "LIVE",
+        ),
+
+    ]
+
+    for label, value in signals:
+
+        with st.container(
+            border=True
+        ):
+
+            c1, c2 = st.columns(
+                [2, 5],
+                gap="small",
+            )
+
+            with c1:
+
+                st.caption(
+                    label
+                )
+
+            with c2:
+
+                st.write(
+                    value
+                )
+
+    st.info(
+        "SOUL FORGE backend routing is preserved. "
+        "UI changes do not replace RUFLO or OpenRouter."
+    )
+
+
+# =============================================================================
+# KNOWLEDGE
+# =============================================================================
+
+def render_knowledge():
+
+    st.subheader(
+        "📚 Knowledge"
+    )
+
+    st.caption(
+        "Source-grounded development workspace."
+    )
+
+    try:
+
+        from app.knowledge.knowledge_engine import (
+            KnowledgeEngine,
+        )
+
+        engine = KnowledgeEngine()
+
+    except Exception:
+
+        st.warning(
+            "Knowledge engine is not currently available."
+        )
+
+        return
+
+    uploaded = st.file_uploader(
+        "Upload source",
+        type=[
+            "txt",
+            "md",
+            "csv",
+        ],
+    )
+
+    if uploaded is not None:
+
+        try:
+
+            content = uploaded.read().decode(
+                "utf-8",
+                errors="replace",
+            )
+
+            engine.add_text(
+                uploaded.name,
+                content,
+            )
+
+            st.success(
+                f"Source loaded: {uploaded.name}"
+            )
+
+        except Exception as exc:
+
+            st.error(
+                f"Source error: {exc}"
+            )
+
+    question = st.text_area(
+        "Knowledge Question",
+        placeholder=(
+            "Ask something about your sources..."
+        ),
+        height=100,
+    )
+
+    if st.button(
+        "🧠 SEARCH KNOWLEDGE",
+        use_container_width=True,
+    ):
+
+        if not question.strip():
+
+            st.warning(
+                "Enter a question first."
+            )
+
+        else:
+
+            try:
+
+                result = engine.retrieve(
+                    question.strip()
+                )
+
+                st.subheader(
+                    "📖 Retrieved Context"
+                )
+
+                st.write(
+                    result
+                )
+
+            except Exception as exc:
+
+                st.error(
+                    f"Retrieval error: {exc}"
+                )
+
+
+# =============================================================================
+# CHAT
+# =============================================================================
+
+def render_chat():
+
+    st.subheader(
+        "💬 SOUL FORGE Chat"
+    )
+
+    st.caption(
+        "Normal conversation through the production "
+        "BANKAI AI bridge."
+    )
+
+    for message in (
+        st.session_state.chat_messages
+    ):
+
+        role = message.get(
+            "role",
+            "user",
+        )
+
+        with st.chat_message(
+            role
+        ):
+
+            st.write(
+                message.get(
+                    "content",
+                    "",
+                )
+            )
+
+            model = message.get(
+                "model"
+            )
+
+            if model:
+
+                st.caption(
+                    f"MODEL · {model}"
+                )
+
+    prompt = st.chat_input(
+        "Ask SOUL FORGE..."
+    )
+
+    if prompt:
+
+        st.session_state.chat_messages.append(
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        )
+
+        with st.chat_message(
+            "user"
+        ):
+
+            st.write(
+                prompt
+            )
+
+        with st.chat_message(
+            "assistant"
+        ):
+
+            with st.spinner(
+                "BANKAI THINKING..."
+            ):
+
+                result = bankai_request(
+                    prompt,
+                    intent="CHAT",
+                )
+
+            response = result_text(
+                result
+            )
+
+            st.write(
+                response
+            )
+
+            if isinstance(
+                result,
+                dict,
+            ):
+
+                model = result.get(
+                    "actual_model",
+                    result.get(
+                        "model",
+                        "",
+                    ),
+                )
+
+                if model:
+
+                    st.caption(
+                        f"MODEL · {model}"
+                    )
+
+                st.session_state.chat_messages.append(
+                    {
+                        "role": "assistant",
+                        "content": response,
+                        "model": model,
+                    }
+                )
+
+            else:
+
+                st.session_state.chat_messages.append(
+                    {
+                        "role": "assistant",
+                        "content": response,
+                    }
+                )
+
+        st.rerun()
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# AGENTIC AI
+# =============================================================================
+
+def render_agentic():
+
+    st.subheader(
+        "🤖 Agentic AI"
+    )
+
+    st.caption(
+        "UNDERSTAND → PLAN → IMPLEMENT → "
+        "VALIDATE → REVIEW → FINALIZE"
+    )
+
+    st.markdown(
+        "### 🧠 Mission"
+    )
+
+    prompt = st.text_area(
+        "Agentic request",
+        value=(
+            st.session_state.agentic_prompt
+        ),
+        placeholder=(
+            "Example: Build a complete Python module for..."
+        ),
+        height=120,
+    )
+
+    st.session_state.agentic_prompt = (
+        prompt
+    )
+
+    if st.button(
+        "🚀 START AGENTIC WORKFLOW",
+        use_container_width=True,
+    ):
+
+        if not prompt.strip():
+
+            st.warning(
+                "Enter an agentic request first."
+            )
+
+        else:
+
+            with st.status(
+                "RUFLO agentic workflow running...",
+                expanded=True,
+            ) as status:
+
+                st.write(
+                    "🧠 UNDERSTAND"
+                )
+
+                st.write(
+                    "📋 PLAN"
+                )
+
+                st.write(
+                    "⚙️ IMPLEMENT"
+                )
+
+                st.write(
+                    "🧪 VALIDATE"
+                )
+
+                st.write(
+                    "🔎 REVIEW"
+                )
+
+                st.write(
+                    "🏁 FINALIZE"
+                )
+
+                result = bankai_request(
+                    prompt.strip(),
+                    intent="AGENTIC",
+                )
+
+                st.session_state.agentic_result = (
+                    result
+                )
+
+                status.update(
+                    label=(
+                        "Agentic workflow complete"
+                    ),
+                    state="complete",
+                )
+
+    result = (
+        st.session_state.agentic_result
+    )
+
+    if result is not None:
+
+        st.markdown(
+            "### 🧩 Result"
+        )
+
+        show_result(
+            result
+        )
+
+        if isinstance(
+            result,
+            dict,
+        ):
+
+            stages = result.get(
+                "stages"
+            )
+
+            if isinstance(
+                stages,
+                dict,
+            ):
+
+                st.markdown(
+                    "### 🔬 Agentic Stages"
+                )
+
+                stage_names = [
+
+                    (
+                        "UNDERSTAND",
+                        "understanding",
+                    ),
+
+                    (
+                        "PLAN",
+                        "plan",
+                    ),
+
+                    (
+                        "IMPLEMENT",
+                        "implementation",
+                    ),
+
+                    (
+                        "VALIDATE",
+                        "validation",
+                    ),
+
+                    (
+                        "REVIEW",
+                        "review",
+                    ),
+
+                    (
+                        "FINALIZE",
+                        "finalize",
+                    ),
+
+                ]
+
+                for title, key in stage_names:
+
+                    content = stages.get(
+                        key,
+                        "",
+                    )
+
+                    with st.expander(
+                        f"{'✓' if content else '○'} {title}",
+                        expanded=False,
+                    ):
+
+                        if content:
+
+                            st.write(
+                                content
+                            )
+
+                        else:
+
+                            st.caption(
+                                "Stage information unavailable."
+                            )
+
+    st.markdown(
+        "### 👨‍💻 User Control"
+    )
+
+    st.warning(
+        "Generated work remains under user control. "
+        "Review and test before acceptance."
+    )
+
+    c1, c2 = st.columns(
+        2,
+        gap="small",
+    )
+
+    with c1:
+
+        if st.button(
+            "🧪 USER TEST",
+            use_container_width=True,
+        ):
+
+            st.session_state.agentic_user_tested = (
+                True
+            )
+
+            st.success(
+                "Marked for user testing."
+            )
+
+    with c2:
+
+        if st.button(
+            "✓ ACCEPT",
+            use_container_width=True,
+        ):
+
+            st.session_state.agentic_accepted = (
+                True
+            )
+
+            st.success(
+                "User acceptance recorded."
+            )
+
+    st.divider()
+
+    render_telemetry()
+
+
+# =============================================================================
+# PITMYDORO
+# =============================================================================
+
+def render_pitmydoro():
+
+    st.subheader(
+        "⏱️ PITMYDORO"
+    )
+
+    st.caption(
+        "Coding focus • task linked • F1 race mindset."
+    )
+
+    if st.session_state.pit_running:
+
+        if (
+            st.session_state.pit_started_at
+            is None
+        ):
+
+            st.session_state.pit_started_at = (
+                time.time()
+            )
+
+        elapsed = (
+            st.session_state.pit_elapsed
+            + (
+                time.time()
+                - st.session_state.pit_started_at
+            )
+        )
+
+    else:
+
+        elapsed = (
+            st.session_state.pit_elapsed
+        )
+
+    timer_col, status_col = st.columns(
+        [2.5, 1],
+        gap="small",
+    )
+
+    with timer_col:
+
+        st.metric(
+            "LAP",
+            f"{st.session_state.pit_lap:02d}",
+        )
+
+        st.metric(
+            "TIME",
+            format_seconds(elapsed),
+        )
+
+    with status_col:
+
+        if st.session_state.pit_running:
+
+            st.success(
+                "RACING"
+            )
+
+        else:
+
+            st.info(
+                "STANDBY"
+            )
+
+        st.caption(
+            f"PROJECT: {project_name()}"
+        )
+
+    if st.session_state.pit_running:
+
+        st.markdown(
+            "### 🔴 🔴 🔴 🔴 🔴"
+        )
+
+        st.caption(
+            "FULL FOCUS • STAY ON THE LAP"
+        )
+
+    else:
+
+        st.markdown(
+            "### ⚫ ⚫ ⚫ ⚫ ⚫"
+        )
+
+        st.caption(
+            "READY TO START"
+        )
+
+    c1, c2, c3 = st.columns(
+        3,
+        gap="small",
+    )
+
+    with c1:
+
+        if not st.session_state.pit_running:
+
+            if st.button(
+                "🏁 START",
+                use_container_width=True,
+            ):
+
+                st.session_state.pit_running = (
+                    True
+                )
+
+                st.session_state.pit_started_at = (
+                    time.time()
+                )
+
+                st.rerun()
+
+        else:
+
+            if st.button(
+                "⏸ PAUSE",
+                use_container_width=True,
+            ):
+
+                st.session_state.pit_elapsed = (
+                    elapsed
+                )
+
+                st.session_state.pit_running = (
+                    False
+                )
+
+                st.session_state.pit_started_at = (
+                    None
+                )
+
+                st.rerun()
+
+    with c2:
+
+        if st.button(
+            "🔄 RESET",
+            use_container_width=True,
+        ):
+
+            st.session_state.pit_running = (
+                False
+            )
+
+            st.session_state.pit_started_at = (
+                None
+            )
+
+            st.session_state.pit_elapsed = (
+                0.0
+            )
+
+            st.session_state.pit_lap = 1
+
+            st.rerun()
+
+    with c3:
+
+        if st.button(
+            "🏎️ NEXT LAP",
+            use_container_width=True,
+        ):
+
+            st.session_state.pit_lap += 1
+
+            st.session_state.pit_elapsed = (
+                0.0
+            )
+
+            st.session_state.pit_started_at = (
+
+                time.time()
+
+                if st.session_state.pit_running
+
+                else None
+
+            )
+
+            st.rerun()
+
+    if st.session_state.pit_running:
+
+        @st.fragment(
+            run_every="1s"
+        )
+        def live_timer():
+
+            if (
+                st.session_state.pit_started_at
+                is None
+            ):
+
+                return
+
+            current = (
+                st.session_state.pit_elapsed
+                + (
+                    time.time()
+                    - st.session_state.pit_started_at
+                )
+            )
+
+            st.metric(
+                "LIVE",
+                format_seconds(current),
+            )
+
+        live_timer()
+
+    st.markdown(
+        "### 📻 DRIVER MINDSET"
+    )
+
+    st.info(
+        "Focus on the current lap. "
+        "One task. One decision. One improvement."
+    )
+
+
+# =============================================================================
+# PAGE ROUTER
+# =============================================================================
+
+if (
+    st.session_state.page
+    == "Command Center"
+):
+
+    render_command_center()
+
+elif (
+    st.session_state.page
+    == "Projects"
+):
+
+    render_projects()
+
+elif (
+    st.session_state.page
+    == "Knowledge"
+):
+
+    render_knowledge()
+
+elif (
+    st.session_state.page
+    == "Chat"
+):
+
+    render_chat()
+
+elif (
+    st.session_state.page
+    == "Agentic AI"
+):
+
+    render_agentic()
+
+elif (
+    st.session_state.page
+    == "PITMYDORO"
+):
+
+    render_pitmydoro()
+
+
+# =============================================================================
+# BOTTOM STATUS BAR
+# =============================================================================
+
+st.divider()
+
+c1, c2, c3 = st.columns(
+    [2, 5, 2],
+    gap="small",
+)
+
+with c1:
+
+    st.caption(
+        "⚔️ SOUL FORGE"
+    )
+
+with c2:
+
+    st.caption(
+        f"PROJECT • {project_name()}"
+    )
+
+with c3:
+
+    st.caption(
+        datetime.now().strftime(
+            "%H:%M"
+        )
+    )
