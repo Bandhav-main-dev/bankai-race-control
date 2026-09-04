@@ -1,0 +1,1034 @@
+
+/* =========================================================================
+   BANKAI RACE CONTROL V3
+   BLEACH × RED BULL RACING
+   INTERACTIVE SPIRITUAL COCKPIT
+   ========================================================================= */
+
+
+/* =========================================================================
+   MAIN BACKGROUND
+   ========================================================================= */
+
+.stApp {
+
+    background:
+
+        /* GOLD BANKAI CORE */
+        radial-gradient(
+            circle at 52% 110%,
+            rgba(255, 193, 7, 0.25) 0%,
+            rgba(255, 193, 7, 0.12) 12%,
+            rgba(255, 193, 7, 0.035) 28%,
+            transparent 48%
+        ),
+
+        /* RED ENERGY */
+        radial-gradient(
+            circle at 100% 5%,
+            rgba(230, 15, 40, 0.32) 0%,
+            rgba(230, 15, 40, 0.14) 16%,
+            rgba(230, 15, 40, 0.04) 32%,
+            transparent 52%
+        ),
+
+        /* BLUE TELEMETRY */
+        radial-gradient(
+            circle at 0% 30%,
+            rgba(0, 120, 255, 0.34) 0%,
+            rgba(0, 120, 255, 0.16) 17%,
+            rgba(0, 120, 255, 0.04) 35%,
+            transparent 55%
+        ),
+
+        /* PURPLE REIATSU */
+        radial-gradient(
+            circle at 72% 52%,
+            rgba(145, 65, 255, 0.20) 0%,
+            rgba(145, 65, 255, 0.08) 20%,
+            transparent 45%
+        ),
+
+        /* DEEP NAVY CORE */
+        radial-gradient(
+            ellipse at center,
+            #10243b 0%,
+            #071525 35%,
+            #030914 72%,
+            #010308 100%
+        );
+
+    background-size:
+        180% 180%,
+        160% 160%,
+        160% 160%,
+        150% 150%,
+        100% 100%;
+
+    animation:
+        bankaiAtmosphere 16s ease-in-out infinite alternate;
+
+    min-height: 100vh;
+}
+
+
+/* =========================================================================
+   MOVING SPIRITUAL ENERGY
+   ========================================================================= */
+
+.stApp::before {
+
+    content: "";
+
+    position: fixed;
+
+    inset: -20%;
+
+    pointer-events: none;
+
+    z-index: 0;
+
+    background:
+
+        radial-gradient(
+            ellipse at 20% 30%,
+            rgba(0, 170, 255, 0.13),
+            transparent 30%
+        ),
+
+        radial-gradient(
+            ellipse at 80% 25%,
+            rgba(225, 6, 0, 0.12),
+            transparent 28%
+        ),
+
+        radial-gradient(
+            ellipse at 65% 80%,
+            rgba(155, 75, 255, 0.10),
+            transparent 30%
+        );
+
+    filter: blur(35px);
+
+    animation:
+        spiritualFlow 12s ease-in-out infinite alternate;
+}
+
+
+/* =========================================================================
+   TELEMETRY GRID + SCANLINES
+   ========================================================================= */
+
+.stApp::after {
+
+    content: "";
+
+    position: fixed;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 1;
+
+    background:
+
+        /* horizontal scanlines */
+        repeating-linear-gradient(
+            0deg,
+            transparent 0px,
+            transparent 5px,
+            rgba(255,255,255,0.012) 6px
+        ),
+
+        /* vertical telemetry grid */
+        repeating-linear-gradient(
+            90deg,
+            transparent 0px,
+            transparent 89px,
+            rgba(0,180,255,0.028) 90px
+        ),
+
+        /* horizontal telemetry grid */
+        repeating-linear-gradient(
+            0deg,
+            transparent 0px,
+            transparent 89px,
+            rgba(0,180,255,0.022) 90px
+        );
+
+    opacity: 0.65;
+}
+
+
+/* =========================================================================
+   BACKGROUND ANIMATIONS
+   ========================================================================= */
+
+@keyframes bankaiAtmosphere {
+
+    0% {
+        background-position:
+            50% 100%,
+            100% 0%,
+            0% 35%,
+            70% 50%,
+            center;
+    }
+
+    50% {
+        background-position:
+            55% 90%,
+            85% 12%,
+            10% 25%,
+            60% 45%,
+            center;
+    }
+
+    100% {
+        background-position:
+            45% 105%,
+            100% 4%,
+            0% 40%,
+            75% 55%,
+            center;
+    }
+}
+
+
+@keyframes spiritualFlow {
+
+    0% {
+        transform:
+            translate3d(-2%, -1%, 0)
+            scale(1);
+    }
+
+    50% {
+        transform:
+            translate3d(2%, 2%, 0)
+            scale(1.04);
+    }
+
+    100% {
+        transform:
+            translate3d(-1%, 3%, 0)
+            scale(1.08);
+    }
+}
+
+
+/* =========================================================================
+   MAIN CONTENT
+   ========================================================================= */
+
+.main .block-container {
+
+    position: relative;
+
+    z-index: 5;
+
+    max-width: 1480px;
+
+    padding-top: 1.2rem;
+
+    padding-bottom: 3rem;
+}
+
+
+/* =========================================================================
+   TOP PROJECT SELECTOR
+   ========================================================================= */
+
+div[data-testid="stSelectbox"] {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(5, 24, 44, 0.94),
+            rgba(9, 13, 25, 0.92)
+        );
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 0 25px rgba(0,110,255,0.08);
+}
+
+
+/* =========================================================================
+   HEADINGS
+   ========================================================================= */
+
+h1 {
+
+    color: #ffffff !important;
+
+    font-weight: 950 !important;
+
+    letter-spacing: 4px !important;
+
+    text-transform: uppercase;
+
+    text-shadow:
+
+        0 0 8px rgba(255,255,255,0.35),
+
+        0 0 20px rgba(0,150,255,0.65),
+
+        0 0 45px rgba(0,100,255,0.25);
+}
+
+
+h2 {
+
+    color: #f4f7fb !important;
+
+    font-weight: 900 !important;
+
+    text-shadow:
+        0 0 12px rgba(0,140,255,0.25);
+}
+
+
+h3 {
+
+    color: #dcecff !important;
+
+    font-weight: 800 !important;
+}
+
+
+/* =========================================================================
+   INTERACTIVE GLASS CARDS
+   ========================================================================= */
+
+[data-testid="stMetric"],
+div[data-testid="stVerticalBlockBorderWrapper"],
+.stExpander {
+
+    position: relative;
+
+    background:
+
+        linear-gradient(
+            145deg,
+            rgba(14, 38, 64, 0.86),
+            rgba(3, 9, 18, 0.93)
+        ) !important;
+
+    border:
+        1px solid rgba(0,160,255,0.22) !important;
+
+    border-radius:
+        14px !important;
+
+    box-shadow:
+
+        inset 0 1px 0 rgba(255,255,255,0.045),
+
+        0 12px 30px rgba(0,0,0,0.32),
+
+        0 0 25px rgba(0,110,255,0.045) !important;
+
+    backdrop-filter:
+        blur(12px);
+
+    transition:
+        transform 0.22s ease,
+        border-color 0.22s ease,
+        box-shadow 0.22s ease;
+}
+
+
+/* Card hover */
+
+[data-testid="stMetric"]:hover,
+div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+.stExpander:hover {
+
+    transform:
+        translateY(-4px);
+
+    border-color:
+        rgba(0,190,255,0.55) !important;
+
+    box-shadow:
+
+        inset 0 1px 0
+        rgba(255,255,255,0.08),
+
+        0 18px 40px
+        rgba(0,0,0,0.40),
+
+        0 0 28px
+        rgba(0,145,255,0.16) !important;
+}
+
+
+/* =========================================================================
+   METRICS
+   ========================================================================= */
+
+[data-testid="stMetricLabel"] {
+
+    color:
+        #70a8d8 !important;
+
+    font-size:
+        0.68rem !important;
+
+    font-weight:
+        850 !important;
+
+    letter-spacing:
+        1.7px;
+
+    text-transform:
+        uppercase;
+}
+
+
+[data-testid="stMetricValue"] {
+
+    color:
+        #ffffff !important;
+
+    font-size:
+        1.9rem !important;
+
+    font-weight:
+        900 !important;
+
+    text-shadow:
+        0 0 14px rgba(0,190,255,0.40);
+}
+
+
+/* =========================================================================
+   BUTTONS
+   ========================================================================= */
+
+.stButton > button {
+
+    position: relative;
+
+    overflow: hidden;
+
+    background:
+
+        linear-gradient(
+            135deg,
+            #112a45,
+            #071321
+        ) !important;
+
+    border:
+        1px solid
+        rgba(0,160,255,0.35) !important;
+
+    border-radius:
+        9px !important;
+
+    color:
+        #ffffff !important;
+
+    font-weight:
+        850 !important;
+
+    letter-spacing:
+        0.7px;
+
+    box-shadow:
+        0 5px 18px rgba(0,0,0,0.25);
+
+    transition:
+        all 0.18s ease;
+}
+
+
+.stButton > button:hover {
+
+    transform:
+        translateY(-3px)
+        scale(1.01);
+
+    border-color:
+        #00bfff !important;
+
+    box-shadow:
+
+        0 0 20px
+        rgba(0,180,255,0.32),
+
+        0 10px 25px
+        rgba(0,0,0,0.35);
+}
+
+
+.stButton > button:active {
+
+    transform:
+        translateY(1px)
+        scale(0.98);
+}
+
+
+/* =========================================================================
+   PRIMARY BUTTON — RACING RED
+   ========================================================================= */
+
+button[kind="primary"] {
+
+    background:
+
+        linear-gradient(
+            135deg,
+            #ff1735,
+            #d0001b 45%,
+            #79000e
+        ) !important;
+
+    border:
+        1px solid
+        #ff5065 !important;
+
+    box-shadow:
+
+        0 0 15px
+        rgba(225,6,0,0.30),
+
+        inset 0 1px 0
+        rgba(255,255,255,0.18);
+}
+
+
+button[kind="primary"]:hover {
+
+    box-shadow:
+
+        0 0 30px
+        rgba(225,6,0,0.60),
+
+        0 12px 30px
+        rgba(0,0,0,0.35);
+}
+
+
+/* =========================================================================
+   RADIO BUTTON NAVIGATION
+   ========================================================================= */
+
+section[data-testid="stSidebar"] .stRadio label {
+
+    border-radius:
+        8px;
+
+    padding:
+        7px 10px;
+
+    margin:
+        2px 0;
+
+    transition:
+        all 0.18s ease;
+}
+
+
+section[data-testid="stSidebar"] .stRadio label:hover {
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(0,120,255,0.15),
+            rgba(225,6,0,0.07)
+        );
+
+    transform:
+        translateX(5px);
+
+    box-shadow:
+        inset 3px 0 0 #00aaff;
+}
+
+
+/* =========================================================================
+   SIDEBAR — F1 GARAGE
+   ========================================================================= */
+
+section[data-testid="stSidebar"] {
+
+    background:
+
+        radial-gradient(
+            circle at 50% 0%,
+            rgba(0,110,255,0.25),
+            transparent 30%
+        ),
+
+        radial-gradient(
+            circle at 0% 55%,
+            rgba(225,6,0,0.14),
+            transparent 35%
+        ),
+
+        radial-gradient(
+            circle at 100% 90%,
+            rgba(247,201,72,0.08),
+            transparent 32%
+        ),
+
+        linear-gradient(
+            180deg,
+            #061321,
+            #071b2c 42%,
+            #03070e 100%
+        ) !important;
+
+    border-right:
+        1px solid
+        rgba(0,160,255,0.28);
+
+    box-shadow:
+        12px 0 40px rgba(0,0,0,0.28);
+}
+
+
+section[data-testid="stSidebar"] * {
+
+    color:
+        #e0edfa;
+}
+
+
+/* =========================================================================
+   TEAM RADIO
+   ========================================================================= */
+
+.bankai-radio-card {
+
+    position:
+        relative;
+
+    overflow:
+        hidden;
+
+    background:
+
+        linear-gradient(
+            135deg,
+            rgba(20,43,70,0.96),
+            rgba(4,11,21,0.98)
+        );
+
+    border:
+        1px solid
+        rgba(0,170,255,0.28);
+
+    border-left:
+        4px solid
+        #ff1638;
+
+    border-radius:
+        12px;
+
+    padding:
+        16px 20px;
+
+    box-shadow:
+
+        0 0 22px
+        rgba(0,110,255,0.10);
+}
+
+
+/* Radio scanner */
+
+.bankai-radio-card::after {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    top:
+        0;
+
+    left:
+        -100%;
+
+    width:
+        55%;
+
+    height:
+        100%;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(0,190,255,0.08),
+            transparent
+        );
+
+    animation:
+        radioScanner 3.5s linear infinite;
+}
+
+
+@keyframes radioScanner {
+
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 150%;
+    }
+}
+
+
+/* =========================================================================
+   STATUS INDICATORS
+   ========================================================================= */
+
+.bankai-gold {
+
+    color:
+        #ffd447 !important;
+
+    text-shadow:
+        0 0 12px rgba(255,195,50,0.65);
+}
+
+
+.telemetry-blue {
+
+    color:
+        #00c8ff !important;
+
+    text-shadow:
+        0 0 12px rgba(0,200,255,0.60);
+}
+
+
+.racing-red {
+
+    color:
+        #ff3452 !important;
+
+    text-shadow:
+        0 0 12px rgba(255,45,75,0.55);
+}
+
+
+.spiritual-purple {
+
+    color:
+        #b77cff !important;
+
+    text-shadow:
+        0 0 14px rgba(180,110,255,0.65);
+}
+
+
+/* =========================================================================
+   PROGRESS BAR
+   ========================================================================= */
+
+div[data-testid="stProgress"] {
+
+    background:
+        rgba(0,18,35,0.92) !important;
+
+    border-radius:
+        999px !important;
+
+    padding:
+        2px;
+}
+
+
+div[data-testid="stProgress"] > div > div {
+
+    background:
+
+        linear-gradient(
+            90deg,
+            #005cff,
+            #00c8ff,
+            #ffd447,
+            #ff1735
+        ) !important;
+
+    box-shadow:
+
+        0 0 15px
+        rgba(0,190,255,0.55);
+
+    animation:
+        telemetryGlow 2.5s ease-in-out infinite alternate;
+}
+
+
+@keyframes telemetryGlow {
+
+    from {
+        filter:
+            brightness(0.95);
+    }
+
+    to {
+        filter:
+            brightness(1.25);
+    }
+}
+
+
+/* =========================================================================
+   INPUTS
+   ========================================================================= */
+
+.stTextInput input,
+.stTextArea textarea,
+.stNumberInput input {
+
+    background:
+        rgba(2,10,20,0.92) !important;
+
+    color:
+        #ffffff !important;
+
+    border:
+        1px solid
+        rgba(0,160,255,0.30) !important;
+
+    border-radius:
+        9px !important;
+
+    transition:
+        all 0.18s ease;
+}
+
+
+.stTextInput input:hover,
+.stTextArea textarea:hover,
+.stNumberInput input:hover {
+
+    border-color:
+        rgba(0,190,255,0.55) !important;
+}
+
+
+.stTextInput input:focus,
+.stTextArea textarea:focus,
+.stNumberInput input:focus {
+
+    border-color:
+        #00c8ff !important;
+
+    box-shadow:
+        0 0 18px
+        rgba(0,190,255,0.22) !important;
+}
+
+
+/* =========================================================================
+   SELECT BOX
+   ========================================================================= */
+
+div[data-baseweb="select"] {
+
+    background:
+        rgba(5,18,32,0.95) !important;
+
+    border:
+        1px solid
+        rgba(0,150,255,0.25) !important;
+
+    border-radius:
+        9px !important;
+}
+
+
+/* =========================================================================
+   EXPANDERS
+   ========================================================================= */
+
+details {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(10,30,50,0.90),
+            rgba(3,9,18,0.96)
+        ) !important;
+
+    border:
+        1px solid
+        rgba(0,150,255,0.20) !important;
+
+    border-radius:
+        12px !important;
+}
+
+
+/* =========================================================================
+   DIVIDERS
+   ========================================================================= */
+
+hr {
+
+    border:
+        none !important;
+
+    height:
+        1px !important;
+
+    background:
+
+        linear-gradient(
+            90deg,
+            transparent,
+            #006eff 20%,
+            #00c8ff 35%,
+            #ff1735 65%,
+            #ffd447 80%,
+            transparent
+        ) !important;
+
+    opacity:
+        0.65;
+}
+
+
+/* =========================================================================
+   CODE BLOCKS
+   ========================================================================= */
+
+pre {
+
+    background:
+        linear-gradient(
+            135deg,
+            #020811,
+            #08192b
+        ) !important;
+
+    border:
+        1px solid
+        rgba(0,170,255,0.22) !important;
+
+    border-radius:
+        10px !important;
+
+    box-shadow:
+        inset 0 0 25px
+        rgba(0,100,200,0.08);
+}
+
+
+/* =========================================================================
+   ALERTS
+   ========================================================================= */
+
+div[data-testid="stAlert"] {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(7,28,47,0.94),
+            rgba(3,9,17,0.96)
+        ) !important;
+
+    border:
+        1px solid
+        rgba(0,170,255,0.25) !important;
+
+    border-radius:
+        10px !important;
+
+    box-shadow:
+        0 0 20px
+        rgba(0,100,255,0.08);
+}
+
+
+/* =========================================================================
+   SCROLLBAR
+   ========================================================================= */
+
+::-webkit-scrollbar {
+    width:
+        9px;
+}
+
+::-webkit-scrollbar-track {
+    background:
+        #02050a;
+}
+
+::-webkit-scrollbar-thumb {
+
+    background:
+
+        linear-gradient(
+            180deg,
+            #006eff,
+            #00bfff,
+            #ff1735,
+            #ffd447
+        );
+
+    border-radius:
+        20px;
+}
+
+
+/* =========================================================================
+   FOCUS MODE — VISUAL PULSE
+   ========================================================================= */
+
+@keyframes focusPulse {
+
+    0%, 100% {
+
+        box-shadow:
+            0 0 8px
+            rgba(0,170,255,0.08);
+    }
+
+    50% {
+
+        box-shadow:
+            0 0 30px
+            rgba(0,170,255,0.18);
+    }
+}
+
+
+/* =========================================================================
+   MOBILE
+   ========================================================================= */
+
+@media (max-width: 900px) {
+
+    .main .block-container {
+
+        padding-left:
+            1rem;
+
+        padding-right:
+            1rem;
+    }
+
+    h1 {
+
+        font-size:
+            1.8rem !important;
+
+        letter-spacing:
+            2px !important;
+    }
+}
