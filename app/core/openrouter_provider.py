@@ -22,9 +22,9 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT = Path(
-    "/content/BANKAI-RACE-CONTROL"
-)
+# Resolve the repository root from this file so the provider works
+# both locally in Colab and on Streamlit Cloud.
+PROJECT = Path(__file__).resolve().parents[2]
 
 CONFIG_FILE = (
     PROJECT
