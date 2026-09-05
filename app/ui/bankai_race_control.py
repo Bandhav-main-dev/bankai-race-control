@@ -9,7 +9,52 @@
 # =============================================================================
 
 
-from app.services.soul_forge_github_page import _sf_github_delivery_page
+# =============================================================================
+# SOUL FORGE DEPLOYMENT IMPORT BOOTSTRAP
+# =============================================================================
+
+import sys
+from pathlib import Path
+
+_SF_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+if str(_SF_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SF_REPO_ROOT))
+
+# =============================================================================
+# SOUL FORGE — DEPLOYMENT-SAFE GITHUB DELIVERY LOADER
+# =============================================================================
+
+import importlib.util
+
+_SF_GITHUB_PAGE_FILE = (
+    Path(__file__).resolve().parents[1]
+    / "services"
+    / "soul_forge_github_page.py"
+)
+
+_SF_GITHUB_PAGE_SPEC = importlib.util.spec_from_file_location(
+    "soul_forge_github_page_runtime",
+    _SF_GITHUB_PAGE_FILE,
+)
+
+if _SF_GITHUB_PAGE_SPEC is None or _SF_GITHUB_PAGE_SPEC.loader is None:
+    raise ImportError(
+        f"Unable to load Soul Forge GitHub page service: "
+        f"{_SF_GITHUB_PAGE_FILE}"
+    )
+
+_SF_GITHUB_PAGE_MODULE = importlib.util.module_from_spec(
+    _SF_GITHUB_PAGE_SPEC
+)
+
+_SF_GITHUB_PAGE_SPEC.loader.exec_module(
+    _SF_GITHUB_PAGE_MODULE
+)
+
+_sf_github_delivery_page = (
+    _SF_GITHUB_PAGE_MODULE._sf_github_delivery_page
+)
 def _sf_memory_get_project_name():
 
     try:
