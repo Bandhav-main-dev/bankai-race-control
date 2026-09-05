@@ -9,7 +9,6 @@
 # =============================================================================
 
 
-from app.services.soul_forge_github_page import _sf_github_delivery_page
 def _sf_memory_get_project_name():
 
     try:
@@ -439,7 +438,6 @@ PAGES = [
     ("💬", "Chat"),
     ("🤖", "Agentic AI"),
     ("⏱️", "PITMYDORO"),
-    ("🚀", "GitHub Delivery"),
 ]
 columns = st.columns(
     len(PAGES),
@@ -4730,13 +4728,10 @@ def _sf_focus_render_task_selector():
 if st.session_state.get("page") != "Pomodoro":
     _sf_focus_render_global()
 
-if st.session_state.page == "GitHub Delivery":
-    _sf_github_delivery_page()
-elif (
+if (
     st.session_state.page
     == "Command Center"
 ):
-
 
     render_command_center()
 

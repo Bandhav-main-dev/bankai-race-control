@@ -8,8 +8,14 @@
 # SOUL FORGE — DEVELOPER MINDSET
 # =============================================================================
 
+SF_MAX_DEVELOPER_QUOTE = (
+    "You are the best developer because you think you are the best."
+)
 
-from app.services.soul_forge_github_page import _sf_github_delivery_page
+SF_MAX_DEVELOPER_QUOTE_LABEL = (
+    "SOUL FORGE × Max-inspired mindset"
+)
+
 def _sf_memory_get_project_name():
 
     try:
@@ -147,6 +153,8 @@ def _sf_memory_render():
 
     except Exception:
         pass
+
+
 
 
 # ============================================================================
@@ -433,13 +441,11 @@ st.info(
 PAGES = [
     ("📋", "Task Manager"),
     ("🏠", "Command Center"),
-    ("🍅", "Pomodoro"),
     ("📁", "Projects"),
     ("📚", "Knowledge"),
     ("💬", "Chat"),
     ("🤖", "Agentic AI"),
     ("⏱️", "PITMYDORO"),
-    ("🚀", "GitHub Delivery"),
 ]
 columns = st.columns(
     len(PAGES),
@@ -1005,6 +1011,8 @@ Rules:
         return []
 
 
+
+
 # =============================================================================
 # SOUL_FORGE_GLOBAL_FOCUS_TIMER_V1
 # =============================================================================
@@ -1264,12 +1272,16 @@ def _sf_focus_complete():
     st.session_state.sf_focus_paused = False
 
 
+
+
+
 # Initialize global focus state as soon as the application loads.
 _sf_focus_init()
 
 # =============================================================================
 # END SOUL_FORGE_GLOBAL_FOCUS_TIMER_V1
 # =============================================================================
+
 
 
 def render_task_manager():
@@ -3398,6 +3410,7 @@ SOURCE MATERIAL:
 # =============================================================================
 
 
+
 def render_sf_max_developer_quote():
 
     # ========================================================================
@@ -3408,6 +3421,17 @@ def render_sf_max_developer_quote():
         "# ⚔️ SOUL FORGE"
     )
 
+    st.markdown(
+        "### **THE FORGE OF GREAT DEVELOPERS**"
+    )
+
+    st.caption(
+        "SOUL FORGE × Max-inspired mindset"
+    )
+
+    st.markdown(
+        "> **“You are the best developer because you think you are the best.”**"
+    )
 
     st.caption(
         "THINK  •  BUILD  •  ATTACK  •  IMPROVE"
@@ -3428,6 +3452,7 @@ def render_chat():
         pass
 
 
+
     # ========================================================================
     # 🧠 SOUL FORGE PERSISTENT MEMORY
     # ========================================================================
@@ -3435,6 +3460,7 @@ def render_chat():
     _sf_memory_init()
     _sf_memory_load_active()
     _sf_memory_render()
+
 
 
     st.subheader(
@@ -4431,287 +4457,6 @@ def _sf_focus_render_global():
             pass
 
 
-def _sf_render_pomodoro_page():
-    """
-    SOUL FORGE — dedicated Pomodoro control page.
-
-    Global timer settings are changed here.
-    The compact global timer is hidden while this page is active.
-    """
-
-    import streamlit as st
-
-    # -------------------------------------------------------------------------
-    # SESSION STATE
-    # -------------------------------------------------------------------------
-
-    if "sf_work_minutes" not in st.session_state:
-        st.session_state.sf_work_minutes = 25
-
-    if "sf_break_minutes" not in st.session_state:
-        st.session_state.sf_break_minutes = 5
-
-    if "sf_long_break_minutes" not in st.session_state:
-        st.session_state.sf_long_break_minutes = 15
-
-    if "sf_cycles_before_long_break" not in st.session_state:
-        st.session_state.sf_cycles_before_long_break = 4
-
-    if "sf_focus_seconds" not in st.session_state:
-        st.session_state.sf_focus_seconds = (
-            int(st.session_state.sf_work_minutes) * 60
-        )
-
-    if "sf_phase" not in st.session_state:
-        st.session_state.sf_phase = "WORK"
-
-    if "sf_timer_running" not in st.session_state:
-        st.session_state.sf_timer_running = False
-
-    # -------------------------------------------------------------------------
-    # PAGE HEADER
-    # -------------------------------------------------------------------------
-
-    st.title("🍅 POMODORO")
-
-    st.caption(
-        "Configure your focus intervals and control the Pomodoro timer."
-    )
-
-    # -------------------------------------------------------------------------
-    # SETTINGS
-    # -------------------------------------------------------------------------
-
-    st.subheader("⚙️ Timer Settings")
-
-    work_col, break_col, long_col, cycle_col = st.columns(
-        4,
-        gap="small",
-    )
-
-    with work_col:
-        work_minutes = st.number_input(
-            "Work",
-            min_value=1,
-            max_value=180,
-            value=int(st.session_state.sf_work_minutes),
-            step=1,
-            key="sf_pom_work_input",
-        )
-
-    with break_col:
-        break_minutes = st.number_input(
-            "Break",
-            min_value=1,
-            max_value=60,
-            value=int(st.session_state.sf_break_minutes),
-            step=1,
-            key="sf_pom_break_input",
-        )
-
-    with long_col:
-        long_break_minutes = st.number_input(
-            "Long Break",
-            min_value=1,
-            max_value=120,
-            value=int(st.session_state.sf_long_break_minutes),
-            step=1,
-            key="sf_pom_long_break_input",
-        )
-
-    with cycle_col:
-        cycles = st.number_input(
-            "Cycles",
-            min_value=1,
-            max_value=12,
-            value=int(st.session_state.sf_cycles_before_long_break),
-            step=1,
-            key="sf_pom_cycles_input",
-        )
-
-    if st.button(
-        "💾 SAVE SETTINGS",
-        key="sf_pom_save_settings",
-        use_container_width=True,
-    ):
-
-        st.session_state.sf_work_minutes = int(work_minutes)
-        st.session_state.sf_break_minutes = int(break_minutes)
-        st.session_state.sf_long_break_minutes = int(long_break_minutes)
-        st.session_state.sf_cycles_before_long_break = int(cycles)
-
-        # Apply the new duration to the currently selected phase.
-        if st.session_state.sf_phase == "WORK":
-            st.session_state.sf_focus_seconds = (
-                int(work_minutes) * 60
-            )
-        else:
-            st.session_state.sf_focus_seconds = (
-                int(break_minutes) * 60
-            )
-
-        st.session_state.sf_timer_running = False
-        st.session_state.sf_timer_complete = False
-
-        st.success(
-            "Pomodoro settings saved.",
-            icon="✅",
-        )
-
-    # -------------------------------------------------------------------------
-    # CURRENT TIMER
-    # -------------------------------------------------------------------------
-
-    st.divider()
-
-    st.subheader("🎯 Current Timer")
-
-    task_col, phase_col, time_col = st.columns(
-        [3, 1, 1.5],
-        gap="small",
-    )
-
-    with task_col:
-
-        active_task = st.session_state.get(
-            "sf_active_task",
-            "ONE-TASK",
-        )
-
-        st.metric(
-            "ACTIVE TASK",
-            str(active_task)[:32],
-        )
-
-    with phase_col:
-
-        st.metric(
-            "PHASE",
-            str(
-                st.session_state.get(
-                    "sf_phase",
-                    "WORK",
-                )
-            ),
-        )
-
-    with time_col:
-
-        seconds = max(
-            0,
-            int(
-                st.session_state.get(
-                    "sf_focus_seconds",
-                    int(work_minutes) * 60,
-                )
-            ),
-        )
-
-        minutes = seconds // 60
-        secs = seconds % 60
-
-        st.metric(
-            "TIME",
-            f"{minutes:02d}:{secs:02d}",
-        )
-
-    # -------------------------------------------------------------------------
-    # TIMER CONTROLS
-    # -------------------------------------------------------------------------
-
-    start_col, reset_col, skip_col = st.columns(
-        3,
-        gap="small",
-    )
-
-    with start_col:
-
-        if st.session_state.sf_timer_running:
-
-            if st.button(
-                "⏸️ PAUSE",
-                key="sf_pom_pause",
-                use_container_width=True,
-            ):
-                st.session_state.sf_timer_running = False
-                st.rerun()
-
-        else:
-
-            if st.button(
-                "▶️ START",
-                key="sf_pom_start",
-                use_container_width=True,
-            ):
-                st.session_state.sf_timer_running = True
-                st.session_state.sf_timer_complete = False
-                st.rerun()
-
-    with reset_col:
-
-        if st.button(
-            "🔄 RESET",
-            key="sf_pom_reset",
-            use_container_width=True,
-        ):
-
-            st.session_state.sf_timer_running = False
-            st.session_state.sf_timer_complete = False
-
-            if st.session_state.sf_phase == "WORK":
-                st.session_state.sf_focus_seconds = (
-                    int(st.session_state.sf_work_minutes) * 60
-                )
-            else:
-                st.session_state.sf_focus_seconds = (
-                    int(st.session_state.sf_break_minutes) * 60
-                )
-
-            st.rerun()
-
-    with skip_col:
-
-        if st.button(
-            "⏭️ SKIP",
-            key="sf_pom_skip",
-            use_container_width=True,
-        ):
-
-            st.session_state.sf_timer_running = False
-            st.session_state.sf_timer_complete = False
-
-            if st.session_state.sf_phase == "WORK":
-                st.session_state.sf_phase = "BREAK"
-                st.session_state.sf_focus_seconds = (
-                    int(st.session_state.sf_break_minutes) * 60
-                )
-            else:
-                st.session_state.sf_phase = "WORK"
-                st.session_state.sf_focus_seconds = (
-                    int(st.session_state.sf_work_minutes) * 60
-                )
-
-            st.rerun()
-
-    # -------------------------------------------------------------------------
-    # COMPLETION
-    # -------------------------------------------------------------------------
-
-    if st.session_state.get(
-        "sf_timer_complete",
-        False,
-    ):
-
-        st.warning(
-            "⏰ TIMER COMPLETE",
-            icon="⏰",
-        )
-
-        st.caption(
-            "The interval has finished. Start the next interval or reset it."
-        )
-
-
 def _sf_focus_render_task_selector():
     """
     Backwards-compatible Soul Forge focus selector.
@@ -4727,16 +4472,12 @@ def _sf_focus_render_task_selector():
 # SOUL FORGE — GLOBAL POMODORO / ACTIVE TASK
 # Rendered BEFORE the page router so it stays visible on every page.
 # ============================================================================
-if st.session_state.get("page") != "Pomodoro":
-    _sf_focus_render_global()
+_sf_focus_render_global()
 
-if st.session_state.page == "GitHub Delivery":
-    _sf_github_delivery_page()
-elif (
+if (
     st.session_state.page
     == "Command Center"
 ):
-
 
     render_command_center()
 

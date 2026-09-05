@@ -8,8 +8,14 @@
 # SOUL FORGE — DEVELOPER MINDSET
 # =============================================================================
 
+SF_MAX_DEVELOPER_QUOTE = (
+    "You are the best developer because you think you are the best."
+)
 
-from app.services.soul_forge_github_page import _sf_github_delivery_page
+SF_MAX_DEVELOPER_QUOTE_LABEL = (
+    "SOUL FORGE × Max-inspired mindset"
+)
+
 def _sf_memory_get_project_name():
 
     try:
@@ -147,6 +153,8 @@ def _sf_memory_render():
 
     except Exception:
         pass
+
+
 
 
 # ============================================================================
@@ -439,7 +447,6 @@ PAGES = [
     ("💬", "Chat"),
     ("🤖", "Agentic AI"),
     ("⏱️", "PITMYDORO"),
-    ("🚀", "GitHub Delivery"),
 ]
 columns = st.columns(
     len(PAGES),
@@ -1005,6 +1012,8 @@ Rules:
         return []
 
 
+
+
 # =============================================================================
 # SOUL_FORGE_GLOBAL_FOCUS_TIMER_V1
 # =============================================================================
@@ -1264,12 +1273,16 @@ def _sf_focus_complete():
     st.session_state.sf_focus_paused = False
 
 
+
+
+
 # Initialize global focus state as soon as the application loads.
 _sf_focus_init()
 
 # =============================================================================
 # END SOUL_FORGE_GLOBAL_FOCUS_TIMER_V1
 # =============================================================================
+
 
 
 def render_task_manager():
@@ -3398,6 +3411,7 @@ SOURCE MATERIAL:
 # =============================================================================
 
 
+
 def render_sf_max_developer_quote():
 
     # ========================================================================
@@ -3408,6 +3422,17 @@ def render_sf_max_developer_quote():
         "# ⚔️ SOUL FORGE"
     )
 
+    st.markdown(
+        "### **THE FORGE OF GREAT DEVELOPERS**"
+    )
+
+    st.caption(
+        "SOUL FORGE × Max-inspired mindset"
+    )
+
+    st.markdown(
+        "> **“You are the best developer because you think you are the best.”**"
+    )
 
     st.caption(
         "THINK  •  BUILD  •  ATTACK  •  IMPROVE"
@@ -3428,6 +3453,7 @@ def render_chat():
         pass
 
 
+
     # ========================================================================
     # 🧠 SOUL FORGE PERSISTENT MEMORY
     # ========================================================================
@@ -3435,6 +3461,7 @@ def render_chat():
     _sf_memory_init()
     _sf_memory_load_active()
     _sf_memory_render()
+
 
 
     st.subheader(
@@ -4712,6 +4739,8 @@ def _sf_render_pomodoro_page():
         )
 
 
+
+
 def _sf_focus_render_task_selector():
     """
     Backwards-compatible Soul Forge focus selector.
@@ -4730,13 +4759,10 @@ def _sf_focus_render_task_selector():
 if st.session_state.get("page") != "Pomodoro":
     _sf_focus_render_global()
 
-if st.session_state.page == "GitHub Delivery":
-    _sf_github_delivery_page()
-elif (
+if (
     st.session_state.page
     == "Command Center"
 ):
-
 
     render_command_center()
 
