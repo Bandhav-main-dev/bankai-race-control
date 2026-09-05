@@ -1,3 +1,4 @@
+import json
 
 from pathlib import Path
 from datetime import datetime
@@ -246,21 +247,14 @@ st.info(
 # =============================================================================
 
 PAGES = [
-
+    ("📋", "Task Manager"),
     ("🏠", "Command Center"),
-
     ("📁", "Projects"),
-
     ("📚", "Knowledge"),
-
     ("💬", "Chat"),
-
     ("🤖", "Agentic AI"),
-
     ("⏱️", "PITMYDORO"),
-
 ]
-
 columns = st.columns(
     len(PAGES),
     gap="small",
@@ -293,8 +287,808 @@ st.divider()
 
 
 # =============================================================================
+
+# =============================================================================
+# TASK MANAGER
+# =============================================================================
+
+SOUL_FORGE_TASK_FILE = Path(
+    "/content/BANKAI-RACE-CONTROL/data/tasks.json"
+)
+
+
+def _sf_default_tasks():
+    return [
+        {
+            "id": "SF-001",
+            "title": "Build Knowledge Engine",
+            "description": "Improve source-grounded knowledge workflow.",
+            "project": "SOUL FORGE",
+            "priority": "HIGH",
+            "status": "IN PROGRESS",
+            "progress": 70,
+            "next_action": "Implement source retrieval",
+            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+        },
+        {
+            "id": "SF-002",
+            "title": "Improve Agentic Pipeline",
+            "description": "Refine the multi-stage agent workflow.",
+            "project": "SOUL FORGE",
+            "priority": "MEDIUM",
+            "status": "IN PROGRESS",
+            "progress": 40,
+            "next_action": "Review validation stage",
+            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+        },
+        {
+            "id": "SF-003",
+            "title": "Configure OpenRouter",
+            "description": "Maintain multi-model routing and fallback.",
+            "project": "SOUL FORGE",
+            "priority": "HIGH",
+            "status": "COMPLETED",
+            "progress": 100,
+            "next_action": "Monitor routing",
+            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+        },
+    ]
+
+
+def _sf_load_tasks():
+    try:
+        if not SOUL_FORGE_TASK_FILE.exists():
+            tasks = _sf_default_tasks()
+            SOUL_FORGE_TASK_FILE.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+            SOUL_FORGE_TASK_FILE.write_text(
+                json.dumps(tasks, indent=2),
+                encoding="utf-8",
+            )
+            return tasks
+
+        data = json.loads(
+            SOUL_FORGE_TASK_FILE.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        if isinstance(data, list):
+            return data
+
+    except Exception:
+        pass
+
+    return _sf_default_tasks()
+
+
+def _sf_save_tasks(tasks):
+    SOUL_FORGE_TASK_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    SOUL_FORGE_TASK_FILE.write_text(
+        json.dumps(tasks, indent=2),
+        encoding="utf-8",
+    )
+
+
+def _sf_task_id(tasks):
+    numbers = []
+
+    for task in tasks:
+        match = re.search(
+            r"SF-(\d+)",
+            str(task.get("id", "")),
+        )
+
+        if match:
+            numbers.append(
+                int(match.group(1))
+            )
+
+    next_number = max(numbers, default=0) + 1
+
+    return f"SF-{next_number:03d}"
+
+
+def _sf_task_badge(priority):
+    return {
+        "HIGH": "🔴 HIGH",
+        "MEDIUM": "🟡 MEDIUM",
+        "LOW": "🟢 LOW",
+    }.get(priority, priority)
+
+
+def _sf_task_progress(value):
+    try:
+        value = int(value)
+    except Exception:
+        value = 0
+
+    return max(0, min(100, value))
+
+
+def render_task_manager():
+
+    st.title("📋 TASK MANAGER")
+
+    st.caption(
+        "Plan, track and complete your SOUL FORGE development work."
+    )
+
+    tasks = _sf_load_tasks()
+
+    # ---------------------------------------------------------------------
+    # SESSION STATE
+    # ---------------------------------------------------------------------
+
+    if "sf_task_editing" not in st.session_state:
+        st.session_state.sf_task_editing = None
+
+    if "sf_task_search" not in st.session_state:
+        st.session_state.sf_task_search = ""
+
+    # ---------------------------------------------------------------------
+    # SUMMARY
+    # ---------------------------------------------------------------------
+
+    total = len(tasks)
+    completed = sum(
+        1
+        for task in tasks
+        if task.get("status") == "COMPLETED"
+    )
+    active = total - completed
+
+    average_progress = (
+        round(
+            sum(
+                _sf_task_progress(
+                    task.get("progress", 0)
+                )
+                for task in tasks
+            ) / total
+        )
+        if total
+        else 0
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+            "TOTAL TASKS",
+            total,
+        )
+
+    with col2:
+        st.metric(
+            "ACTIVE",
+            active,
+        )
+
+    with col3:
+        st.metric(
+            "COMPLETED",
+            completed,
+        )
+
+    with col4:
+        st.metric(
+            "AVG PROGRESS",
+            f"{average_progress}%",
+        )
+
+    st.divider()
+
+    # ---------------------------------------------------------------------
+    # CREATE TASK
+    # ---------------------------------------------------------------------
+
+    with st.expander(
+        "➕ CREATE NEW TASK",
+        expanded=False,
+    ):
+
+        with st.form("sf_create_task_form"):
+
+            title = st.text_input(
+                "Task title",
+                placeholder="Example: Implement source ranking",
+            )
+
+            description = st.text_area(
+                "Description",
+                placeholder="What needs to be accomplished?",
+            )
+
+            c1, c2, c3 = st.columns(3)
+
+            with c1:
+                project = st.text_input(
+                    "Project",
+                    value="SOUL FORGE",
+                )
+
+            with c2:
+                priority = st.selectbox(
+                    "Priority",
+                    [
+                        "HIGH",
+                        "MEDIUM",
+                        "LOW",
+                    ],
+                )
+
+            with c3:
+                status = st.selectbox(
+                    "Status",
+                    [
+                        "NOT STARTED",
+                        "IN PROGRESS",
+                        "BLOCKED",
+                        "COMPLETED",
+                    ],
+                )
+
+            next_action = st.text_input(
+                "Next action",
+                placeholder="What should happen next?",
+            )
+
+            progress = st.slider(
+                "Progress",
+                min_value=0,
+                max_value=100,
+                value=0,
+                step=5,
+            )
+
+            submitted = st.form_submit_button(
+                "➕ CREATE TASK",
+                use_container_width=True,
+            )
+
+            if submitted:
+
+                if not title.strip():
+                    st.error(
+                        "Task title is required."
+                    )
+                else:
+
+                    now = datetime.now().isoformat(
+                        timespec="seconds"
+                    )
+
+                    new_task = {
+                        "id": _sf_task_id(tasks),
+                        "title": title.strip(),
+                        "description": description.strip(),
+                        "project": project.strip() or "SOUL FORGE",
+                        "priority": priority,
+                        "status": status,
+                        "progress": (
+                            100
+                            if status == "COMPLETED"
+                            else progress
+                        ),
+                        "next_action": next_action.strip(),
+                        "created_at": now,
+                        "updated_at": now,
+                    }
+
+                    tasks.append(new_task)
+                    _sf_save_tasks(tasks)
+
+                    st.success(
+                        f"Created task: {title.strip()}"
+                    )
+
+                    st.rerun()
+
+    # ---------------------------------------------------------------------
+    # FILTER BAR
+    # ---------------------------------------------------------------------
+
+    st.subheader("🔎 TASKS")
+
+    f1, f2, f3, f4 = st.columns(
+        [1.6, 1, 1, 1]
+    )
+
+    with f1:
+        search = st.text_input(
+            "Search",
+            key="sf_task_search",
+            placeholder="Search tasks...",
+        )
+
+    with f2:
+        status_filter = st.selectbox(
+            "Status",
+            [
+                "ALL",
+                "NOT STARTED",
+                "IN PROGRESS",
+                "BLOCKED",
+                "COMPLETED",
+            ],
+        )
+
+    with f3:
+        priority_filter = st.selectbox(
+            "Priority",
+            [
+                "ALL",
+                "HIGH",
+                "MEDIUM",
+                "LOW",
+            ],
+        )
+
+    with f4:
+        view_filter = st.selectbox(
+            "View",
+            [
+                "ALL TASKS",
+                "ACTIVE",
+                "COMPLETED",
+            ],
+        )
+
+    # ---------------------------------------------------------------------
+    # FILTER
+    # ---------------------------------------------------------------------
+
+    filtered = []
+
+    for task in tasks:
+
+        title_text = str(
+            task.get("title", "")
+        ).lower()
+
+        description_text = str(
+            task.get("description", "")
+        ).lower()
+
+        project_text = str(
+            task.get("project", "")
+        ).lower()
+
+        combined = (
+            title_text
+            + " "
+            + description_text
+            + " "
+            + project_text
+        )
+
+        if search.strip():
+            if search.lower().strip() not in combined:
+                continue
+
+        if (
+            status_filter != "ALL"
+            and task.get("status") != status_filter
+        ):
+            continue
+
+        if (
+            priority_filter != "ALL"
+            and task.get("priority") != priority_filter
+        ):
+            continue
+
+        if (
+            view_filter == "ACTIVE"
+            and task.get("status") == "COMPLETED"
+        ):
+            continue
+
+        if (
+            view_filter == "COMPLETED"
+            and task.get("status") != "COMPLETED"
+        ):
+            continue
+
+        filtered.append(task)
+
+    # ---------------------------------------------------------------------
+    # TASK LIST
+    # ---------------------------------------------------------------------
+
+    if not filtered:
+
+        st.info(
+            "No tasks match the current filters."
+        )
+
+    for task in filtered:
+
+        task_id = task.get(
+            "id",
+            "UNKNOWN",
+        )
+
+        task_title = task.get(
+            "title",
+            "Untitled Task",
+        )
+
+        task_status = task.get(
+            "status",
+            "NOT STARTED",
+        )
+
+        task_priority = task.get(
+            "priority",
+            "MEDIUM",
+        )
+
+        task_progress = _sf_task_progress(
+            task.get("progress", 0)
+        )
+
+        with st.container(
+            border=True
+        ):
+
+            top_left, top_mid, top_right = st.columns(
+                [4, 2, 1.2]
+            )
+
+            with top_left:
+
+                if task_status == "COMPLETED":
+                    st.markdown(
+                        f"### ✅ {task_title}"
+                    )
+                else:
+                    st.markdown(
+                        f"### ☐ {task_title}"
+                    )
+
+                st.caption(
+                    f"{task_id}  •  "
+                    f"{task.get('project', 'SOUL FORGE')}"
+                )
+
+            with top_mid:
+
+                st.write(
+                    _sf_task_badge(
+                        task_priority
+                    )
+                )
+
+                st.caption(
+                    task_status
+                )
+
+            with top_right:
+
+                st.write(
+                    f"**{task_progress}%**"
+                )
+
+            st.progress(
+                task_progress / 100
+            )
+
+            info1, info2 = st.columns(2)
+
+            with info1:
+
+                st.write(
+                    "**Description**"
+                )
+
+                st.caption(
+                    task.get(
+                        "description",
+                        "No description.",
+                    )
+                    or "No description."
+                )
+
+            with info2:
+
+                st.write(
+                    "**Next action**"
+                )
+
+                st.caption(
+                    task.get(
+                        "next_action",
+                        "No next action.",
+                    )
+                    or "No next action."
+                )
+
+            action1, action2, action3 = st.columns(3)
+
+            with action1:
+
+                if task_status == "COMPLETED":
+
+                    if st.button(
+                        "↩️ Reopen",
+                        key=f"sf_reopen_{task_id}",
+                        use_container_width=True,
+                    ):
+
+                        task["status"] = "IN PROGRESS"
+
+                        if task_progress >= 100:
+                            task["progress"] = 90
+
+                        task["updated_at"] = (
+                            datetime.now().isoformat(
+                                timespec="seconds"
+                            )
+                        )
+
+                        _sf_save_tasks(tasks)
+                        st.rerun()
+
+                else:
+
+                    if st.button(
+                        "✅ Complete",
+                        key=f"sf_complete_{task_id}",
+                        use_container_width=True,
+                    ):
+
+                        task["status"] = "COMPLETED"
+                        task["progress"] = 100
+                        task["updated_at"] = (
+                            datetime.now().isoformat(
+                                timespec="seconds"
+                            )
+                        )
+
+                        _sf_save_tasks(tasks)
+                        st.rerun()
+
+            with action2:
+
+                if st.button(
+                    "✏️ Edit",
+                    key=f"sf_edit_{task_id}",
+                    use_container_width=True,
+                ):
+
+                    st.session_state.sf_task_editing = task_id
+                    st.rerun()
+
+            with action3:
+
+                if st.button(
+                    "🗑️ Delete",
+                    key=f"sf_delete_{task_id}",
+                    use_container_width=True,
+                ):
+
+                    tasks = [
+                        item
+                        for item in tasks
+                        if item.get("id") != task_id
+                    ]
+
+                    _sf_save_tasks(tasks)
+
+                    st.rerun()
+
+            # -------------------------------------------------------------
+            # EDIT PANEL
+            # -------------------------------------------------------------
+
+            if (
+                st.session_state.sf_task_editing
+                == task_id
+            ):
+
+                st.divider()
+
+                st.markdown(
+                    "#### ✏️ EDIT TASK"
+                )
+
+                with st.form(
+                    f"sf_edit_form_{task_id}"
+                ):
+
+                    edit_title = st.text_input(
+                        "Title",
+                        value=task_title,
+                    )
+
+                    edit_description = st.text_area(
+                        "Description",
+                        value=task.get(
+                            "description",
+                            "",
+                        ),
+                    )
+
+                    e1, e2, e3 = st.columns(3)
+
+                    with e1:
+
+                        edit_project = st.text_input(
+                            "Project",
+                            value=task.get(
+                                "project",
+                                "SOUL FORGE",
+                            ),
+                        )
+
+                    with e2:
+
+                        edit_priority = st.selectbox(
+                            "Priority",
+                            [
+                                "HIGH",
+                                "MEDIUM",
+                                "LOW",
+                            ],
+                            index=[
+                                "HIGH",
+                                "MEDIUM",
+                                "LOW",
+                            ].index(
+                                task.get(
+                                    "priority",
+                                    "MEDIUM",
+                                )
+                            ),
+                        )
+
+                    with e3:
+
+                        statuses = [
+                            "NOT STARTED",
+                            "IN PROGRESS",
+                            "BLOCKED",
+                            "COMPLETED",
+                        ]
+
+                        current_status = task.get(
+                            "status",
+                            "NOT STARTED",
+                        )
+
+                        edit_status = st.selectbox(
+                            "Status",
+                            statuses,
+                            index=(
+                                statuses.index(
+                                    current_status
+                                )
+                                if current_status in statuses
+                                else 0
+                            ),
+                        )
+
+                    edit_next_action = st.text_input(
+                        "Next action",
+                        value=task.get(
+                            "next_action",
+                            "",
+                        ),
+                    )
+
+                    edit_progress = st.slider(
+                        "Progress",
+                        0,
+                        100,
+                        task_progress,
+                        5,
+                    )
+
+                    save_edit = st.form_submit_button(
+                        "💾 SAVE CHANGES",
+                        use_container_width=True,
+                    )
+
+                    if save_edit:
+
+                        task["title"] = (
+                            edit_title.strip()
+                            or task["title"]
+                        )
+
+                        task["description"] = (
+                            edit_description.strip()
+                        )
+
+                        task["project"] = (
+                            edit_project.strip()
+                            or "SOUL FORGE"
+                        )
+
+                        task["priority"] = (
+                            edit_priority
+                        )
+
+                        task["status"] = (
+                            edit_status
+                        )
+
+                        task["next_action"] = (
+                            edit_next_action.strip()
+                        )
+
+                        task["progress"] = (
+                            100
+                            if edit_status == "COMPLETED"
+                            else edit_progress
+                        )
+
+                        task["updated_at"] = (
+                            datetime.now().isoformat(
+                                timespec="seconds"
+                            )
+                        )
+
+                        _sf_save_tasks(tasks)
+
+                        st.session_state.sf_task_editing = None
+
+                        st.rerun()
+
+    # ---------------------------------------------------------------------
+    # TASK DATA
+    # ---------------------------------------------------------------------
+
+    st.divider()
+
+    with st.expander(
+        "⚙️ TASK DATA"
+    ):
+
+        st.caption(
+            "Tasks are persisted locally so they survive Streamlit/Colab reruns."
+        )
+
+        st.code(
+            str(SOUL_FORGE_TASK_FILE),
+            language="text",
+        )
+
+        if st.button(
+            "🔄 RESET SAMPLE TASKS",
+            use_container_width=True,
+        ):
+
+            _sf_save_tasks(
+                _sf_default_tasks()
+            )
+
+            st.session_state.sf_task_editing = None
+
+            st.success(
+                "Sample tasks restored."
+            )
+
+            st.rerun()
+
+
+
 # COMMAND CENTER
 # =============================================================================
+
+if st.session_state.page == "Task Manager":
+    render_task_manager()
 
 def render_command_center():
 
