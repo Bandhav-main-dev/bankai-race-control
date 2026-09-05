@@ -24,7 +24,9 @@ def _sf_github_delivery_page():
         validate_selected_files,
     )
 
-    project_root = Path("/content/BANKAI-RACE-CONTROL")
+    # Resolve repository root from this file.
+    # Works in Google Colab and Streamlit Cloud.
+    project_root = Path(__file__).resolve().parents[2]
 
     st.title("🚀 GitHub Delivery")
 

@@ -240,9 +240,9 @@ import streamlit as st
 # SOUL FORGE
 # =============================================================================
 
-PROJECT_ROOT = Path(
-    "/content/BANKAI-RACE-CONTROL"
-)
+# Resolve repository root from this file.
+# Works in Google Colab and Streamlit Cloud.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 # =============================================================================
@@ -522,8 +522,10 @@ st.divider()
 # ⚔️ TASK MANAGER
 # =============================================================================
 
-SOUL_FORGE_TASK_FILE = Path(
-    "/content/BANKAI-RACE-CONTROL/data/tasks.json"
+SOUL_FORGE_TASK_FILE = (
+    PROJECT_ROOT
+    / "data"
+    / "tasks.json"
 )
 
 
@@ -4182,8 +4184,8 @@ def _sf_focus_render_global():
     # DISCOVER 🗡️ ACTIVE TASK FROM EXISTING TASK DATA
     # -------------------------------------------------------------------------
 
-    project_root = Path("/content/BANKAI-RACE-CONTROL")
-    tasks_file = project_root / "tasks.json"
+    project_root = PROJECT_ROOT
+    tasks_file = project_root / "data" / "tasks.json"
 
     try:
         import json
