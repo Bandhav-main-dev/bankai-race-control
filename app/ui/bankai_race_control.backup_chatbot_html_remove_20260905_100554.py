@@ -8,8 +8,14 @@
 # SOUL FORGE — DEVELOPER MINDSET
 # =============================================================================
 
+SF_MAX_DEVELOPER_QUOTE = (
+    "You are the best developer because you think you are the best."
+)
 
-from app.services.soul_forge_github_page import _sf_github_delivery_page
+SF_MAX_DEVELOPER_QUOTE_LABEL = (
+    "SOUL FORGE × Max-inspired mindset"
+)
+
 def _sf_memory_get_project_name():
 
     try:
@@ -147,6 +153,8 @@ def _sf_memory_render():
 
     except Exception:
         pass
+
+
 
 
 # ============================================================================
@@ -431,14 +439,13 @@ st.info(
 # =============================================================================
 
 PAGES = [
-    ("📋", "⚔️ Task Manager"),
+    ("📋", "Task Manager"),
     ("🏠", "Command Center"),
     ("📁", "Projects"),
     ("📚", "Knowledge"),
     ("💬", "Chat"),
     ("🤖", "Agentic AI"),
     ("⏱️", "PITMYDORO"),
-    ("🚀", "GitHub Delivery"),
 ]
 columns = st.columns(
     len(PAGES),
@@ -474,7 +481,7 @@ st.divider()
 # =============================================================================
 
 # =============================================================================
-# ⚔️ TASK MANAGER
+# TASK MANAGER
 # =============================================================================
 
 SOUL_FORGE_TASK_FILE = Path(
@@ -514,7 +521,7 @@ def _sf_default_tasks():
             "description": "Maintain multi-model routing and fallback.",
             "project": "SOUL FORGE",
             "priority": "HIGH",
-            "status": "✨ COMPLETED",
+            "status": "COMPLETED",
             "progress": 100,
             "next_action": "Monitor routing",
             "created_at": datetime.now().isoformat(timespec="seconds"),
@@ -560,13 +567,13 @@ def _sf_save_tasks(tasks):
     Therefore task writes must never assume that SOUL_FORGE_TASK_FILE is
     writable.
 
-    👑 👑 PRIORITY:
+    Priority:
         1. Configured task file when writable.
         2. /tmp/soul_forge/data/tasks.json
         3. TMPDIR/soul_forge/data/tasks.json
 
     The current task list is also retained in Streamlit session state so
-    ⚔️ Task Manager operations do not crash when persistent storage is unavailable.
+    Task Manager operations do not crash when persistent storage is unavailable.
     """
     import json
     import os
@@ -663,7 +670,7 @@ def _sf_save_tasks(tasks):
             last_error = exc
             continue
 
-    # Never crash ⚔️ Task Manager because persistence is unavailable.
+    # Never crash Task Manager because persistence is unavailable.
     try:
         st.session_state["sf_task_storage_ok"] = False
         st.session_state["sf_task_storage_error"] = str(last_error)
@@ -742,7 +749,7 @@ def _sf_task_end_of_month():
 
 
 def _sf_task_deadline_status(deadline, status):
-    if status == "✨ COMPLETED":
+    if status == "COMPLETED":
         return "completed"
 
     if not deadline:
@@ -846,7 +853,7 @@ Rules:
 - Generate 3 to 6 useful tasks.
 - Focus on realistic software/AI development work.
 - Avoid duplicate generic tasks.
-- 👑 👑 PRIORITY must be HIGH, MEDIUM, or LOW.
+- Priority must be HIGH, MEDIUM, or LOW.
 - Do not include deadline, status, progress, id, or timestamps.
 """
 
@@ -888,7 +895,7 @@ Rules:
 - Focus on meaningful monthly milestones.
 - Include development, testing, documentation, reliability, and cleanup where appropriate.
 - Avoid duplicate generic tasks.
-- 👑 👑 PRIORITY must be HIGH, MEDIUM, or LOW.
+- Priority must be HIGH, MEDIUM, or LOW.
 - Do not include deadline, status, progress, id, or timestamps.
 """
 
@@ -1002,6 +1009,8 @@ Rules:
         )
 
         return []
+
+
 
 
 # =============================================================================
@@ -1263,6 +1272,436 @@ def _sf_focus_complete():
     st.session_state.sf_focus_paused = False
 
 
+@st.fragment(run_every="1s")
+@st.fragment(run_every="1s")
+@st.fragment(run_every="1s")
+def _sf_focus_render_global():
+    """
+    SOUL FORGE GLOBAL FOCUS TIMER
+
+    Rules:
+      - Before timer starts: show nothing.
+      - Once timer starts: show timer on every page.
+      - Paused timer remains visible.
+      - Task may be a real task or 'No task selected'.
+      - Stop/reset hides the timer again.
+    """
+
+    # Make sure the focus state exists.
+    _sf_focus_init()
+
+    ss = st.session_state
+
+    # ------------------------------------------------------------
+    # Determine whether a timer session has actually started.
+    # ------------------------------------------------------------
+
+    started_keys = (
+        "sf_focus_active",
+        "sf_focus_started",
+        "sf_focus_running",
+        "sf_focus_started_at",
+        "sf_focus_start_time",
+        "sf_focus_end_time",
+    )
+
+    timer_started = any(
+        bool(ss.get(k))
+        for k in started_keys
+    )
+
+    # A paused timer is still an active timer session.
+    if ss.get("sf_focus_paused", False):
+        timer_started = True
+
+    # ------------------------------------------------------------
+    # TIMER NOT STARTED
+    # ------------------------------------------------------------
+
+    if not timer_started:
+        return
+
+    # ------------------------------------------------------------
+    # ACTIVE TASK
+    # ------------------------------------------------------------
+
+    task_value = None
+
+    for key in (
+        "sf_focus_task",
+        "sf_focus_current_task",
+        "sf_focus_active_task",
+        "sf_focus_task_name",
+        "sf_focus_task_id",
+    ):
+        value = ss.get(key)
+
+        if value not in (None, "", False):
+            task_value = value
+            break
+
+    if isinstance(task_value, dict):
+        task_label = (
+            task_value.get("title")
+            or task_value.get("name")
+            or task_value.get("task")
+            or task_value.get("id")
+            or "No task selected"
+        )
+    else:
+        task_label = str(task_value) if task_value else "No task selected"
+
+    # ------------------------------------------------------------
+    # REMAINING TIME
+    # ------------------------------------------------------------
+
+    remaining = None
+
+    for key in (
+        "sf_focus_remaining",
+        "sf_focus_remaining_seconds",
+        "sf_focus_seconds_left",
+        "sf_focus_time_left",
+    ):
+        value = ss.get(key)
+
+        if isinstance(value, (int, float)):
+            remaining = max(0, int(value))
+            break
+
+    # Try end timestamp if explicit remaining seconds are unavailable.
+    if remaining is None:
+        for key in (
+            "sf_focus_end_time",
+            "sf_focus_end_at",
+        ):
+            end_value = ss.get(key)
+
+            if end_value:
+                try:
+                    if isinstance(end_value, datetime):
+                        remaining = max(
+                            0,
+                            int((end_value - datetime.now()).total_seconds())
+                        )
+                except Exception:
+                    pass
+
+    # Final fallback.
+    if remaining is None:
+        remaining = 0
+
+    hours = remaining // 3600
+    minutes = (remaining % 3600) // 60
+    seconds = remaining % 60
+
+    if hours:
+        time_text = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    else:
+        time_text = f"{minutes:02d}:{seconds:02d}"
+
+    # ------------------------------------------------------------
+    # PAUSE / RUNNING STATE
+    # ------------------------------------------------------------
+
+    paused = bool(
+        ss.get("sf_focus_paused", False)
+        or ss.get("sf_focus_is_paused", False)
+    )
+
+    state_text = "PAUSED" if paused else "RUNNING"
+
+    # ------------------------------------------------------------
+    # TOP FIXED TIMER BAR
+    # ------------------------------------------------------------
+
+    st.markdown(
+        """
+        <style>
+        .sf-global-timer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 999999;
+            background:
+                linear-gradient(
+                    90deg,
+                    rgba(5,5,5,.98),
+                    rgba(18,18,18,.98),
+                    rgba(5,5,5,.98)
+                );
+            border-bottom: 2px solid rgba(220,30,55,.85);
+            box-shadow: 0 5px 25px rgba(0,0,0,.45);
+            padding: 9px 18px;
+            backdrop-filter: blur(14px);
+        }
+
+        .sf-global-timer-inner {
+            max-width: 1400px;
+            margin: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            font-family: Arial, sans-serif;
+        }
+
+        .sf-timer-brand {
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #f4f1ea;
+            white-space: nowrap;
+        }
+
+        .sf-timer-task {
+            flex: 1;
+            min-width: 0;
+            color: #d8d8d8;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sf-timer-task strong {
+            color: #ffffff;
+        }
+
+        .sf-timer-clock {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #ffffff;
+            white-space: nowrap;
+        }
+
+        .sf-timer-state {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #f0c75e;
+            white-space: nowrap;
+        }
+
+        /* Push normal Streamlit content below the fixed timer. */
+        section.main > div {
+            padding-top: 58px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"""
+        <div class="sf-global-timer">
+            <div class="sf-global-timer-inner">
+                <div class="sf-timer-brand">
+                    SOUL FORGE
+                </div>
+
+                <div class="sf-timer-task">
+                    ACTIVE TASK:
+                    <strong>{task_label}</strong>
+                </div>
+
+                <div class="sf-timer-state">
+                    {state_text}
+                </div>
+
+                <div class="sf-timer-clock">
+                    {time_text}
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ------------------------------------------------------------
+    # CONTROLS
+    # ------------------------------------------------------------
+
+    control_cols = st.columns([8, 1, 1, 1])
+
+    with control_cols[1]:
+        if st.button(
+            "▶",
+            key="sf_global_timer_play",
+            help="Play / Resume timer",
+            use_container_width=True,
+        ):
+            try:
+                if paused:
+                    _sf_focus_resume()
+                else:
+                    _sf_focus_start()
+            except Exception as exc:
+                st.warning(f"Timer play failed: {exc}")
+            st.rerun()
+
+    with control_cols[2]:
+        if st.button(
+            "⏸",
+            key="sf_global_timer_pause",
+            help="Pause timer",
+            use_container_width=True,
+        ):
+            try:
+                _sf_focus_pause()
+            except Exception as exc:
+                st.warning(f"Timer pause failed: {exc}")
+            st.rerun()
+
+    with control_cols[3]:
+        if st.button(
+            "↻",
+            key="sf_global_timer_restart",
+            help="Restart timer",
+            use_container_width=True,
+        ):
+            try:
+                _sf_focus_restart()
+            except Exception as exc:
+                st.warning(f"Timer restart failed: {exc}")
+            st.rerun()
+
+def _sf_focus_render_task_selector(tasks=None):
+    """
+    Task Manager integration.
+
+    Uses the task data already present in session_state when available.
+    This deliberately does not replace the existing Task Manager.
+    """
+
+    _sf_focus_init()
+
+    st.markdown("### ⚔️ Focus Session")
+
+    if st.session_state.sf_focus_active:
+        st.info(
+            "A focus session is already running. "
+            "Stop it before selecting another focus task."
+        )
+
+        return
+
+    # Task Manager now passes its actual loaded task list directly.
+    # This avoids guessing where the application's task data lives.
+
+    if not isinstance(tasks, list) or not tasks:
+        st.warning(
+            "No Task Manager tasks are available. "
+            "Create a task first, then start a focus session."
+        )
+        return
+
+    labels = []
+    task_map = {}
+
+    for index, task in enumerate(tasks):
+        if not isinstance(task, dict):
+            continue
+
+        title = (
+            task.get("title")
+            or task.get("name")
+            or task.get("task")
+            or f"Task {index + 1}"
+        )
+
+        task_id = (
+            task.get("id")
+            or task.get("task_id")
+            or index
+        )
+
+        label = str(title)
+
+        labels.append(label)
+        task_map[label] = task
+
+    if not labels:
+        st.warning("No usable tasks found.")
+        return
+
+    selected_label = st.selectbox(
+        "Select the task you want to focus on",
+        labels,
+        key="sf_focus_task_selector",
+    )
+
+    selected_task = task_map[selected_label]
+
+    title = (
+        selected_task.get("title")
+        or selected_task.get("name")
+        or selected_task.get("task")
+        or selected_label
+    )
+
+    task_id = (
+        selected_task.get("id")
+        or selected_task.get("task_id")
+        or selected_label
+    )
+
+    project = (
+        selected_task.get("project")
+        or selected_task.get("project_name")
+        or "SOUL FORGE"
+    )
+
+    priority = (
+        selected_task.get("priority")
+        or "NORMAL"
+    )
+
+    duration_minutes = st.select_slider(
+        "Focus duration",
+        options=[
+            5,
+            10,
+            15,
+            20,
+            25,
+            30,
+            45,
+            60,
+            90,
+            120,
+        ],
+        value=25,
+        key="sf_focus_duration_selector",
+    )
+
+    st.caption(
+        f"Selected: **{title}** • "
+        f"Project: **{project}** • "
+        f"Priority: **{priority}**"
+    )
+
+    if st.button(
+        "⚔️ START FOCUS",
+        key="sf_focus_start_task",
+        type="primary",
+        use_container_width=True,
+    ):
+        _sf_focus_start(
+            task_id=task_id,
+            task_title=title,
+            duration_seconds=duration_minutes * 60,
+            project=project,
+            priority=priority,
+        )
+
+        st.success(
+            f"Focus started: {title}"
+        )
+
+        st.rerun()
+
+
 # Initialize global focus state as soon as the application loads.
 _sf_focus_init()
 
@@ -1271,9 +1710,10 @@ _sf_focus_init()
 # =============================================================================
 
 
+
 def render_task_manager():
 
-    st.title("📋 ⚔️ TASK MANAGER")
+    st.title("📋 TASK MANAGER")
 
     st.caption(
         "Your SOUL FORGE execution board — plan, build, review and finish."
@@ -1476,7 +1916,7 @@ def render_task_manager():
     with top4:
 
         if st.button(
-            "🗑️ RESET ⚔️ TASKS",
+            "🗑️ RESET TASKS",
             use_container_width=True,
         ):
 
@@ -1497,7 +1937,7 @@ def render_task_manager():
         with r1:
 
             if st.button(
-                "🗑️ YES, DELETE ALL ⚔️ TASKS",
+                "🗑️ YES, DELETE ALL TASKS",
                 use_container_width=True,
             ):
 
@@ -1534,7 +1974,7 @@ def render_task_manager():
     completed = sum(
         1
         for task in tasks
-        if task.get("status") == "✨ COMPLETED"
+        if task.get("status") == "COMPLETED"
     )
 
     active = total - completed
@@ -1581,7 +2021,7 @@ def render_task_manager():
 
     with s3:
         st.metric(
-            "✨ COMPLETED",
+            "COMPLETED",
             completed,
         )
 
@@ -1639,7 +2079,7 @@ def render_task_manager():
             with c2:
 
                 priority = st.selectbox(
-                    "👑 👑 PRIORITY",
+                    "Priority",
                     [
                         "HIGH",
                         "MEDIUM",
@@ -1654,8 +2094,8 @@ def render_task_manager():
                     [
                         "NOT STARTED",
                         "IN PROGRESS",
-                        "💀 BLOCKED",
-                        "✨ COMPLETED",
+                        "BLOCKED",
+                        "COMPLETED",
                     ],
                 )
 
@@ -1733,7 +2173,7 @@ def render_task_manager():
                         "status": status,
                         "progress": (
                             100
-                            if status == "✨ COMPLETED"
+                            if status == "COMPLETED"
                             else progress
                         ),
                         "next_action": next_action.strip(),
@@ -1787,15 +2227,15 @@ def render_task_manager():
                 "ALL",
                 "NOT STARTED",
                 "IN PROGRESS",
-                "💀 BLOCKED",
-                "✨ COMPLETED",
+                "BLOCKED",
+                "COMPLETED",
             ],
         )
 
     with f3:
 
         priority_filter = st.selectbox(
-            "👑 👑 PRIORITY",
+            "Priority",
             [
                 "ALL",
                 "HIGH",
@@ -1821,15 +2261,15 @@ def render_task_manager():
         view_filter = st.selectbox(
             "View",
             [
-                "ALL ⚔️ TASKS",
+                "ALL TASKS",
                 "ACTIVE",
-                "✨ COMPLETED",
+                "COMPLETED",
                 "OVERDUE",
             ],
         )
 
     # =========================================================================
-    # FILTER ⚔️ TASKS
+    # FILTER TASKS
     # =========================================================================
 
     filtered = []
@@ -1893,13 +2333,13 @@ def render_task_manager():
 
         if (
             view_filter == "ACTIVE"
-            and task.get("status") == "✨ COMPLETED"
+            and task.get("status") == "COMPLETED"
         ):
             continue
 
         if (
-            view_filter == "✨ COMPLETED"
-            and task.get("status") != "✨ COMPLETED"
+            view_filter == "COMPLETED"
+            and task.get("status") != "COMPLETED"
         ):
             continue
 
@@ -1998,7 +2438,7 @@ def render_task_manager():
 
             with top_left:
 
-                if task_status == "✨ COMPLETED":
+                if task_status == "COMPLETED":
 
                     st.markdown(
                         f"### ✅ {task_title}"
@@ -2120,7 +2560,7 @@ def render_task_manager():
 
             with action1:
 
-                if task_status == "✨ COMPLETED":
+                if task_status == "COMPLETED":
 
                     if st.button(
                         "↩️ REOPEN",
@@ -2153,7 +2593,7 @@ def render_task_manager():
                         use_container_width=True,
                     ):
 
-                        task["status"] = "✨ COMPLETED"
+                        task["status"] = "COMPLETED"
                         task["progress"] = 100
 
                         task["updated_at"] = (
@@ -2214,7 +2654,7 @@ def render_task_manager():
                 st.divider()
 
                 st.markdown(
-                    "#### ✏️ 🗡️ EDIT TASK"
+                    "#### ✏️ EDIT TASK"
                 )
 
                 with st.form(
@@ -2260,7 +2700,7 @@ def render_task_manager():
                         )
 
                         edit_priority = st.selectbox(
-                            "👑 👑 PRIORITY",
+                            "Priority",
                             priorities,
                             index=(
                                 priorities.index(
@@ -2276,8 +2716,8 @@ def render_task_manager():
                         statuses = [
                             "NOT STARTED",
                             "IN PROGRESS",
-                            "💀 BLOCKED",
-                            "✨ COMPLETED",
+                            "BLOCKED",
+                            "COMPLETED",
                         ]
 
                         current_status = task.get(
@@ -2415,7 +2855,7 @@ def render_task_manager():
 
                         task["progress"] = (
                             100
-                            if edit_status == "✨ COMPLETED"
+                            if edit_status == "COMPLETED"
                             else edit_progress
                         )
 
@@ -2496,7 +2936,7 @@ def render_task_manager():
     ):
 
         st.caption(
-            "⚔️ ⚔️ TASKS are persisted locally and survive Streamlit reruns."
+            "Tasks are persisted locally and survive Streamlit reruns."
         )
 
         st.code(
@@ -3262,7 +3702,7 @@ SOURCE MATERIAL:
     st.divider()
 
     st.markdown(
-        "### 📖 Research 🏎️ WORKspace"
+        "### 📖 Research Workspace"
     )
 
     tab1, tab2, tab3 = st.tabs(
@@ -3397,19 +3837,57 @@ SOURCE MATERIAL:
 # =============================================================================
 
 
-def render_sf_max_developer_quote():
 
-    # ========================================================================
-    # SOUL FORGE — CHATBOT HERO TITLE
-    # ========================================================================
+def render_sf_max_developer_quote():
+    """Render the SOUL FORGE developer mindset quote."""
 
     st.markdown(
-        "# ⚔️ SOUL FORGE"
-    )
+        f"""
+        <div style="
+            margin: 18px 0;
+            padding: 20px 24px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(177, 18, 38, 0.22),
+                    rgba(20, 30, 60, 0.28)
+                );
+            box-shadow:
+                0 8px 30px rgba(0, 0, 0, 0.30);
+        ">
 
+            <div style="
+                font-size: 0.75rem;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                opacity: 0.70;
+                margin-bottom: 10px;
+            ">
+                {SF_MAX_DEVELOPER_QUOTE_LABEL}
+            </div>
 
-    st.caption(
-        "THINK  •  BUILD  •  ATTACK  •  IMPROVE"
+            <div style="
+                font-size: 1.30rem;
+                font-weight: 700;
+                line-height: 1.45;
+            ">
+                "{SF_MAX_DEVELOPER_QUOTE}"
+            </div>
+
+            <div style="
+                margin-top: 10px;
+                font-size: 0.78rem;
+                opacity: 0.58;
+                letter-spacing: 0.08em;
+            ">
+                THINK • BUILD • ATTACK • IMPROVE
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 def render_chat():
@@ -3427,6 +3905,7 @@ def render_chat():
         pass
 
 
+
     # ========================================================================
     # 🧠 SOUL FORGE PERSISTENT MEMORY
     # ========================================================================
@@ -3434,6 +3913,7 @@ def render_chat():
     _sf_memory_init()
     _sf_memory_load_active()
     _sf_memory_render()
+
 
 
     st.subheader(
@@ -3602,7 +4082,7 @@ def render_agentic():
                 )
 
                 status.update(
-                    label="🏎️ WORKflow complete",
+                    label="Workflow complete",
                     state="complete",
                 )
 
@@ -4083,659 +4563,11 @@ def render_pitmydoro():
 # ROUTER
 # =============================================================================
 
-
-# === SOUL FORGE GLOBAL HEADER BEGIN ===
-
-@st.fragment(run_every="1s")
-@st.fragment(run_every="1s")
-def _sf_focus_render_global():
-    """
-    SOUL FORGE — compact global Pomodoro command bar.
-
-    Layout:
-        Row 1: SOUL FORGE + SYSTEM STATUS
-        Row 2: 🗡️ ACTIVE TASK + 🌀 PHASE + TIMER + CONTROLS
-
-    This renderer is intentionally compact and native Streamlit.
-    """
-
-    import time
-    import streamlit as st
-
-    # -------------------------------------------------------------------------
-    # SESSION STATE INITIALIZATION
-    # -------------------------------------------------------------------------
-
-    if "sf_timer_running" not in st.session_state:
-        st.session_state.sf_timer_running = False
-
-    if "sf_timer_complete" not in st.session_state:
-        st.session_state.sf_timer_complete = False
-
-    if "sf_focus_seconds" not in st.session_state:
-        st.session_state.sf_focus_seconds = 25 * 60
-
-    if "sf_work_minutes" not in st.session_state:
-        st.session_state.sf_work_minutes = 25
-
-    if "sf_break_minutes" not in st.session_state:
-        st.session_state.sf_break_minutes = 5
-
-    if "sf_phase" not in st.session_state:
-        st.session_state.sf_phase = "WORK"
-
-    if "sf_cycle" not in st.session_state:
-        st.session_state.sf_cycle = 1
-
-    if "sf_completed_sessions" not in st.session_state:
-        st.session_state.sf_completed_sessions = 0
-
-    if "sf_active_task" not in st.session_state:
-        st.session_state.sf_active_task = "ONE-TASK"
-
-    # -------------------------------------------------------------------------
-    # DISCOVER 🗡️ ACTIVE TASK FROM EXISTING TASK DATA
-    # -------------------------------------------------------------------------
-
-    project_root = Path("/content/BANKAI-RACE-CONTROL")
-    tasks_file = project_root / "tasks.json"
-
-    try:
-        import json
-
-        if tasks_file.exists():
-
-            with tasks_file.open("r", encoding="utf-8") as f:
-                task_data = json.load(f)
-
-            tasks = task_data
-
-            if isinstance(task_data, dict):
-                tasks = (
-                    task_data.get("tasks")
-                    or task_data.get("items")
-                    or task_data.get("data")
-                    or []
-                )
-
-            if isinstance(tasks, list) and tasks:
-
-                active = None
-
-                for task in tasks:
-
-                    if not isinstance(task, dict):
-                        continue
-
-                    status = str(
-                        task.get("status", "")
-                    ).strip().lower()
-
-                    if status in {
-                        "active",
-                        "in_progress",
-                        "in progress",
-                        "running",
-                        "current",
-                    }:
-                        active = task
-                        break
-
-                if active is None:
-                    active = tasks[0]
-
-                if isinstance(active, dict):
-
-                    active_name = (
-                        active.get("title")
-                        or active.get("name")
-                        or active.get("task")
-                        or active.get("id")
-                    )
-
-                    if active_name:
-                        st.session_state.sf_active_task = str(
-                            active_name
-                        )[:32]
-
-    except Exception:
-        # Task discovery must never break the main UI.
-        pass
-
-    # -------------------------------------------------------------------------
-    # TIMER HELPERS
-    # -------------------------------------------------------------------------
-
-    def _sf_format_time(seconds):
-        seconds = max(0, int(seconds))
-        minutes = seconds // 60
-        secs = seconds % 60
-        return f"{minutes:02d}:{secs:02d}"
-
-    def _sf_start_timer():
-        st.session_state.sf_timer_running = True
-        st.session_state.sf_timer_complete = False
-        st.session_state.sf_timer_last_tick = time.time()
-
-    def _sf_pause_timer():
-        st.session_state.sf_timer_running = False
-
-    def _sf_reset_timer():
-        st.session_state.sf_timer_running = False
-        st.session_state.sf_timer_complete = False
-
-        if st.session_state.sf_phase == "WORK":
-            st.session_state.sf_focus_seconds = (
-                int(st.session_state.sf_work_minutes) * 60
-            )
-        else:
-            st.session_state.sf_focus_seconds = (
-                int(st.session_state.sf_break_minutes) * 60
-            )
-
-    def _sf_skip_timer():
-        st.session_state.sf_timer_running = False
-        st.session_state.sf_timer_complete = False
-
-        if st.session_state.sf_phase == "WORK":
-
-            st.session_state.sf_phase = "BREAK"
-
-            st.session_state.sf_focus_seconds = (
-                int(st.session_state.sf_break_minutes) * 60
-            )
-
-        else:
-
-            st.session_state.sf_phase = "WORK"
-
-            st.session_state.sf_completed_sessions += 1
-
-            st.session_state.sf_cycle += 1
-
-            st.session_state.sf_focus_seconds = (
-                int(st.session_state.sf_work_minutes) * 60
-            )
-
-    # -------------------------------------------------------------------------
-    # TIMER TICK
-    # -------------------------------------------------------------------------
-
-    if "sf_timer_last_tick" not in st.session_state:
-        st.session_state.sf_timer_last_tick = time.time()
-
-    if st.session_state.sf_timer_running:
-
-        now = time.time()
-
-        elapsed = int(
-            now - st.session_state.sf_timer_last_tick
-        )
-
-        if elapsed > 0:
-
-            st.session_state.sf_focus_seconds = max(
-                0,
-                int(st.session_state.sf_focus_seconds) - elapsed,
-            )
-
-            st.session_state.sf_timer_last_tick = now
-
-            # ---------------------------------------------------------------
-            # 🏆 TIMER COMPLETE
-            # ---------------------------------------------------------------
-
-            if st.session_state.sf_focus_seconds <= 0:
-
-                st.session_state.sf_timer_running = False
-                st.session_state.sf_timer_complete = True
-
-    # -------------------------------------------------------------------------
-    # COMPACT HEADER
-    # -------------------------------------------------------------------------
-
-    header_left, header_right = st.columns(
-        [5.5, 1.5],
-        gap="small",
-    )
-
-    with header_left:
-        st.markdown(
-            "### ⚔️ SOUL FORGE",
-        )
-
-    with header_right:
-        st.markdown(
-            "<div style='text-align:right; padding-top:8px;'>"
-            "🔴 SYSTEM ONLINE"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    # -------------------------------------------------------------------------
-    # COMPACT TIMER ROW
-    # -------------------------------------------------------------------------
-
-    task_col, phase_col, timer_col, start_col, reset_col, skip_col = (
-        st.columns(
-            [2.8, 1.0, 1.25, 0.9, 0.9, 0.9],
-            gap="small",
-        )
-    )
-
-    with task_col:
-
-        st.caption("⚔️ 🗡️ ACTIVE TASK")
-
-        st.markdown(
-            f"**{st.session_state.sf_active_task}**"
-        )
-
-    with phase_col:
-
-        if st.session_state.sf_phase == "WORK":
-            st.caption("🍅 WORK")
-        else:
-            st.caption("☕ BREAK")
-
-    with timer_col:
-
-        if st.session_state.sf_timer_complete:
-
-            st.error(
-                "⏰ COMPLETE",
-                icon="⏰",
-            )
-
-        else:
-
-            st.metric(
-                "TIME",
-                _sf_format_time(
-                    st.session_state.sf_focus_seconds
-                ),
-                label_visibility="visible",
-            )
-
-    with start_col:
-
-        if st.session_state.sf_timer_running:
-
-            if st.button(
-                "⏸️",
-                key="sf_compact_pause",
-                help="Pause timer",
-                use_container_width=True,
-            ):
-                _sf_pause_timer()
-                st.rerun()
-
-        else:
-
-            if st.button(
-                "▶️",
-                key="sf_compact_start",
-                help="Start timer",
-                use_container_width=True,
-            ):
-                _sf_start_timer()
-                st.rerun()
-
-    with reset_col:
-
-        if st.button(
-            "🔄",
-            key="sf_compact_reset",
-            help="Reset timer",
-            use_container_width=True,
-        ):
-            _sf_reset_timer()
-            st.rerun()
-
-    with skip_col:
-
-        if st.button(
-            "⏭️",
-            key="sf_compact_skip",
-            help="⏭️ SKIP interval",
-            use_container_width=True,
-        ):
-            _sf_skip_timer()
-            st.rerun()
-
-    # -------------------------------------------------------------------------
-    # 🏆 TIMER COMPLETE — COMPACT SINGLE LINE
-    # -------------------------------------------------------------------------
-
-    if st.session_state.sf_timer_complete:
-
-        st.info(
-            f"⏰ **🏆 TIMER COMPLETE** — "
-            f"{st.session_state.sf_active_task} — "
-            f"{st.session_state.sf_phase} interval finished.",
-            icon="⏰",
-        )
-
-    # -------------------------------------------------------------------------
-    # ONE-SECOND REFRESH WHILE RUNNING
-    # -------------------------------------------------------------------------
-
-    if st.session_state.sf_timer_running:
-
-        time.sleep(0.05)
-
-        try:
-            st.rerun()
-        except Exception:
-            pass
-
-
-def _sf_render_pomodoro_page():
-    """
-    SOUL FORGE — dedicated Pomodoro control page.
-
-    Global timer settings are changed here.
-    The compact global timer is hidden while this page is active.
-    """
-
-    import streamlit as st
-
-    # -------------------------------------------------------------------------
-    # SESSION STATE
-    # -------------------------------------------------------------------------
-
-    if "sf_work_minutes" not in st.session_state:
-        st.session_state.sf_work_minutes = 25
-
-    if "sf_break_minutes" not in st.session_state:
-        st.session_state.sf_break_minutes = 5
-
-    if "sf_long_break_minutes" not in st.session_state:
-        st.session_state.sf_long_break_minutes = 15
-
-    if "sf_cycles_before_long_break" not in st.session_state:
-        st.session_state.sf_cycles_before_long_break = 4
-
-    if "sf_focus_seconds" not in st.session_state:
-        st.session_state.sf_focus_seconds = (
-            int(st.session_state.sf_work_minutes) * 60
-        )
-
-    if "sf_phase" not in st.session_state:
-        st.session_state.sf_phase = "WORK"
-
-    if "sf_timer_running" not in st.session_state:
-        st.session_state.sf_timer_running = False
-
-    # -------------------------------------------------------------------------
-    # PAGE HEADER
-    # -------------------------------------------------------------------------
-
-    st.title("🏎️ POMODORO")
-
-    st.caption(
-        "Configure your focus intervals and control the Pomodoro timer."
-    )
-
-    # -------------------------------------------------------------------------
-    # SETTINGS
-    # -------------------------------------------------------------------------
-
-    st.subheader("⚙️ Timer Settings")
-
-    work_col, break_col, long_col, cycle_col = st.columns(
-        4,
-        gap="small",
-    )
-
-    with work_col:
-        work_minutes = st.number_input(
-            "🏎️ WORK",
-            min_value=1,
-            max_value=180,
-            value=int(st.session_state.sf_work_minutes),
-            step=1,
-            key="sf_pom_work_input",
-        )
-
-    with break_col:
-        break_minutes = st.number_input(
-            "🟡 BREAK",
-            min_value=1,
-            max_value=60,
-            value=int(st.session_state.sf_break_minutes),
-            step=1,
-            key="sf_pom_break_input",
-        )
-
-    with long_col:
-        long_break_minutes = st.number_input(
-            "Long 🟡 BREAK",
-            min_value=1,
-            max_value=120,
-            value=int(st.session_state.sf_long_break_minutes),
-            step=1,
-            key="sf_pom_long_break_input",
-        )
-
-    with cycle_col:
-        cycles = st.number_input(
-            "Cycles",
-            min_value=1,
-            max_value=12,
-            value=int(st.session_state.sf_cycles_before_long_break),
-            step=1,
-            key="sf_pom_cycles_input",
-        )
-
-    if st.button(
-        "💾 SAVE SETTINGS",
-        key="sf_pom_save_settings",
-        use_container_width=True,
-    ):
-
-        st.session_state.sf_work_minutes = int(work_minutes)
-        st.session_state.sf_break_minutes = int(break_minutes)
-        st.session_state.sf_long_break_minutes = int(long_break_minutes)
-        st.session_state.sf_cycles_before_long_break = int(cycles)
-
-        # Apply the new duration to the currently selected phase.
-        if st.session_state.sf_phase == "WORK":
-            st.session_state.sf_focus_seconds = (
-                int(work_minutes) * 60
-            )
-        else:
-            st.session_state.sf_focus_seconds = (
-                int(break_minutes) * 60
-            )
-
-        st.session_state.sf_timer_running = False
-        st.session_state.sf_timer_complete = False
-
-        st.success(
-            "Pomodoro settings saved.",
-            icon="✅",
-        )
-
-    # -------------------------------------------------------------------------
-    # CURRENT TIMER
-    # -------------------------------------------------------------------------
-
-    st.divider()
-
-    st.subheader("🎯 Current Timer")
-
-    task_col, phase_col, time_col = st.columns(
-        [3, 1, 1.5],
-        gap="small",
-    )
-
-    with task_col:
-
-        active_task = st.session_state.get(
-            "sf_active_task",
-            "ONE-TASK",
-        )
-
-        st.metric(
-            "🗡️ ACTIVE TASK",
-            str(active_task)[:32],
-        )
-
-    with phase_col:
-
-        st.metric(
-            "🌀 PHASE",
-            str(
-                st.session_state.get(
-                    "sf_phase",
-                    "WORK",
-                )
-            ),
-        )
-
-    with time_col:
-
-        seconds = max(
-            0,
-            int(
-                st.session_state.get(
-                    "sf_focus_seconds",
-                    int(work_minutes) * 60,
-                )
-            ),
-        )
-
-        minutes = seconds // 60
-        secs = seconds % 60
-
-        st.metric(
-            "TIME",
-            f"{minutes:02d}:{secs:02d}",
-        )
-
-    # -------------------------------------------------------------------------
-    # TIMER CONTROLS
-    # -------------------------------------------------------------------------
-
-    start_col, reset_col, skip_col = st.columns(
-        3,
-        gap="small",
-    )
-
-    with start_col:
-
-        if st.session_state.sf_timer_running:
-
-            if st.button(
-                "⏸️ PAUSE",
-                key="sf_pom_pause",
-                use_container_width=True,
-            ):
-                st.session_state.sf_timer_running = False
-                st.rerun()
-
-        else:
-
-            if st.button(
-                "▶️ START",
-                key="sf_pom_start",
-                use_container_width=True,
-            ):
-                st.session_state.sf_timer_running = True
-                st.session_state.sf_timer_complete = False
-                st.rerun()
-
-    with reset_col:
-
-        if st.button(
-            "🔄 RESET",
-            key="sf_pom_reset",
-            use_container_width=True,
-        ):
-
-            st.session_state.sf_timer_running = False
-            st.session_state.sf_timer_complete = False
-
-            if st.session_state.sf_phase == "WORK":
-                st.session_state.sf_focus_seconds = (
-                    int(st.session_state.sf_work_minutes) * 60
-                )
-            else:
-                st.session_state.sf_focus_seconds = (
-                    int(st.session_state.sf_break_minutes) * 60
-                )
-
-            st.rerun()
-
-    with skip_col:
-
-        if st.button(
-            "⏭️ SKIP",
-            key="sf_pom_skip",
-            use_container_width=True,
-        ):
-
-            st.session_state.sf_timer_running = False
-            st.session_state.sf_timer_complete = False
-
-            if st.session_state.sf_phase == "WORK":
-                st.session_state.sf_phase = "BREAK"
-                st.session_state.sf_focus_seconds = (
-                    int(st.session_state.sf_break_minutes) * 60
-                )
-            else:
-                st.session_state.sf_phase = "WORK"
-                st.session_state.sf_focus_seconds = (
-                    int(st.session_state.sf_work_minutes) * 60
-                )
-
-            st.rerun()
-
-    # -------------------------------------------------------------------------
-    # COMPLETION
-    # -------------------------------------------------------------------------
-
-    if st.session_state.get(
-        "sf_timer_complete",
-        False,
-    ):
-
-        st.warning(
-            "⏰ 🏆 TIMER COMPLETE",
-            icon="⏰",
-        )
-
-        st.caption(
-            "The interval has finished. Start the next interval or reset it."
-        )
-
-
-def _sf_focus_render_task_selector():
-    """
-    Backwards-compatible Soul Forge focus selector.
-    """
-    return _sf_focus_render_global()
-
-
-# === SOUL FORGE GLOBAL HEADER END ===
-# === SOUL FORGE GLOBAL HEADER CALL BEGIN ===
-# === SOUL FORGE GLOBAL HEADER CALL END ===
-
-# ============================================================================
-# SOUL FORGE — GLOBAL POMODORO / 🗡️ ACTIVE TASK
-# Rendered BEFORE the page router so it stays visible on every page.
-# ============================================================================
-if st.session_state.get("page") != "Pomodoro":
-    _sf_focus_render_global()
-
-if st.session_state.page == "GitHub Delivery":
-    _sf_github_delivery_page()
-elif (
+_sf_focus_render_global()
+if (
     st.session_state.page
     == "Command Center"
 ):
-
 
     render_command_center()
 
@@ -4775,7 +4607,7 @@ elif (
     render_pitmydoro()
 elif (
     st.session_state.page
-    == "⚔️ Task Manager"
+    == "Task Manager"
 ):
     render_task_manager()
 

@@ -9,7 +9,6 @@
 # =============================================================================
 
 
-from app.services.soul_forge_github_page import _sf_github_delivery_page
 def _sf_memory_get_project_name():
 
     try:
@@ -431,14 +430,14 @@ st.info(
 # =============================================================================
 
 PAGES = [
-    ("📋", "⚔️ Task Manager"),
+    ("📋", "Task Manager"),
     ("🏠", "Command Center"),
+    ("🍅", "Pomodoro"),
     ("📁", "Projects"),
     ("📚", "Knowledge"),
     ("💬", "Chat"),
     ("🤖", "Agentic AI"),
     ("⏱️", "PITMYDORO"),
-    ("🚀", "GitHub Delivery"),
 ]
 columns = st.columns(
     len(PAGES),
@@ -474,7 +473,7 @@ st.divider()
 # =============================================================================
 
 # =============================================================================
-# ⚔️ TASK MANAGER
+# TASK MANAGER
 # =============================================================================
 
 SOUL_FORGE_TASK_FILE = Path(
@@ -514,7 +513,7 @@ def _sf_default_tasks():
             "description": "Maintain multi-model routing and fallback.",
             "project": "SOUL FORGE",
             "priority": "HIGH",
-            "status": "✨ COMPLETED",
+            "status": "COMPLETED",
             "progress": 100,
             "next_action": "Monitor routing",
             "created_at": datetime.now().isoformat(timespec="seconds"),
@@ -560,13 +559,13 @@ def _sf_save_tasks(tasks):
     Therefore task writes must never assume that SOUL_FORGE_TASK_FILE is
     writable.
 
-    👑 👑 PRIORITY:
+    Priority:
         1. Configured task file when writable.
         2. /tmp/soul_forge/data/tasks.json
         3. TMPDIR/soul_forge/data/tasks.json
 
     The current task list is also retained in Streamlit session state so
-    ⚔️ Task Manager operations do not crash when persistent storage is unavailable.
+    Task Manager operations do not crash when persistent storage is unavailable.
     """
     import json
     import os
@@ -663,7 +662,7 @@ def _sf_save_tasks(tasks):
             last_error = exc
             continue
 
-    # Never crash ⚔️ Task Manager because persistence is unavailable.
+    # Never crash Task Manager because persistence is unavailable.
     try:
         st.session_state["sf_task_storage_ok"] = False
         st.session_state["sf_task_storage_error"] = str(last_error)
@@ -742,7 +741,7 @@ def _sf_task_end_of_month():
 
 
 def _sf_task_deadline_status(deadline, status):
-    if status == "✨ COMPLETED":
+    if status == "COMPLETED":
         return "completed"
 
     if not deadline:
@@ -846,7 +845,7 @@ Rules:
 - Generate 3 to 6 useful tasks.
 - Focus on realistic software/AI development work.
 - Avoid duplicate generic tasks.
-- 👑 👑 PRIORITY must be HIGH, MEDIUM, or LOW.
+- Priority must be HIGH, MEDIUM, or LOW.
 - Do not include deadline, status, progress, id, or timestamps.
 """
 
@@ -888,7 +887,7 @@ Rules:
 - Focus on meaningful monthly milestones.
 - Include development, testing, documentation, reliability, and cleanup where appropriate.
 - Avoid duplicate generic tasks.
-- 👑 👑 PRIORITY must be HIGH, MEDIUM, or LOW.
+- Priority must be HIGH, MEDIUM, or LOW.
 - Do not include deadline, status, progress, id, or timestamps.
 """
 
@@ -1273,7 +1272,7 @@ _sf_focus_init()
 
 def render_task_manager():
 
-    st.title("📋 ⚔️ TASK MANAGER")
+    st.title("📋 TASK MANAGER")
 
     st.caption(
         "Your SOUL FORGE execution board — plan, build, review and finish."
@@ -1476,7 +1475,7 @@ def render_task_manager():
     with top4:
 
         if st.button(
-            "🗑️ RESET ⚔️ TASKS",
+            "🗑️ RESET TASKS",
             use_container_width=True,
         ):
 
@@ -1497,7 +1496,7 @@ def render_task_manager():
         with r1:
 
             if st.button(
-                "🗑️ YES, DELETE ALL ⚔️ TASKS",
+                "🗑️ YES, DELETE ALL TASKS",
                 use_container_width=True,
             ):
 
@@ -1534,7 +1533,7 @@ def render_task_manager():
     completed = sum(
         1
         for task in tasks
-        if task.get("status") == "✨ COMPLETED"
+        if task.get("status") == "COMPLETED"
     )
 
     active = total - completed
@@ -1581,7 +1580,7 @@ def render_task_manager():
 
     with s3:
         st.metric(
-            "✨ COMPLETED",
+            "COMPLETED",
             completed,
         )
 
@@ -1639,7 +1638,7 @@ def render_task_manager():
             with c2:
 
                 priority = st.selectbox(
-                    "👑 👑 PRIORITY",
+                    "Priority",
                     [
                         "HIGH",
                         "MEDIUM",
@@ -1654,8 +1653,8 @@ def render_task_manager():
                     [
                         "NOT STARTED",
                         "IN PROGRESS",
-                        "💀 BLOCKED",
-                        "✨ COMPLETED",
+                        "BLOCKED",
+                        "COMPLETED",
                     ],
                 )
 
@@ -1733,7 +1732,7 @@ def render_task_manager():
                         "status": status,
                         "progress": (
                             100
-                            if status == "✨ COMPLETED"
+                            if status == "COMPLETED"
                             else progress
                         ),
                         "next_action": next_action.strip(),
@@ -1787,15 +1786,15 @@ def render_task_manager():
                 "ALL",
                 "NOT STARTED",
                 "IN PROGRESS",
-                "💀 BLOCKED",
-                "✨ COMPLETED",
+                "BLOCKED",
+                "COMPLETED",
             ],
         )
 
     with f3:
 
         priority_filter = st.selectbox(
-            "👑 👑 PRIORITY",
+            "Priority",
             [
                 "ALL",
                 "HIGH",
@@ -1821,15 +1820,15 @@ def render_task_manager():
         view_filter = st.selectbox(
             "View",
             [
-                "ALL ⚔️ TASKS",
+                "ALL TASKS",
                 "ACTIVE",
-                "✨ COMPLETED",
+                "COMPLETED",
                 "OVERDUE",
             ],
         )
 
     # =========================================================================
-    # FILTER ⚔️ TASKS
+    # FILTER TASKS
     # =========================================================================
 
     filtered = []
@@ -1893,13 +1892,13 @@ def render_task_manager():
 
         if (
             view_filter == "ACTIVE"
-            and task.get("status") == "✨ COMPLETED"
+            and task.get("status") == "COMPLETED"
         ):
             continue
 
         if (
-            view_filter == "✨ COMPLETED"
-            and task.get("status") != "✨ COMPLETED"
+            view_filter == "COMPLETED"
+            and task.get("status") != "COMPLETED"
         ):
             continue
 
@@ -1998,7 +1997,7 @@ def render_task_manager():
 
             with top_left:
 
-                if task_status == "✨ COMPLETED":
+                if task_status == "COMPLETED":
 
                     st.markdown(
                         f"### ✅ {task_title}"
@@ -2120,7 +2119,7 @@ def render_task_manager():
 
             with action1:
 
-                if task_status == "✨ COMPLETED":
+                if task_status == "COMPLETED":
 
                     if st.button(
                         "↩️ REOPEN",
@@ -2153,7 +2152,7 @@ def render_task_manager():
                         use_container_width=True,
                     ):
 
-                        task["status"] = "✨ COMPLETED"
+                        task["status"] = "COMPLETED"
                         task["progress"] = 100
 
                         task["updated_at"] = (
@@ -2214,7 +2213,7 @@ def render_task_manager():
                 st.divider()
 
                 st.markdown(
-                    "#### ✏️ 🗡️ EDIT TASK"
+                    "#### ✏️ EDIT TASK"
                 )
 
                 with st.form(
@@ -2260,7 +2259,7 @@ def render_task_manager():
                         )
 
                         edit_priority = st.selectbox(
-                            "👑 👑 PRIORITY",
+                            "Priority",
                             priorities,
                             index=(
                                 priorities.index(
@@ -2276,8 +2275,8 @@ def render_task_manager():
                         statuses = [
                             "NOT STARTED",
                             "IN PROGRESS",
-                            "💀 BLOCKED",
-                            "✨ COMPLETED",
+                            "BLOCKED",
+                            "COMPLETED",
                         ]
 
                         current_status = task.get(
@@ -2415,7 +2414,7 @@ def render_task_manager():
 
                         task["progress"] = (
                             100
-                            if edit_status == "✨ COMPLETED"
+                            if edit_status == "COMPLETED"
                             else edit_progress
                         )
 
@@ -2496,7 +2495,7 @@ def render_task_manager():
     ):
 
         st.caption(
-            "⚔️ ⚔️ TASKS are persisted locally and survive Streamlit reruns."
+            "Tasks are persisted locally and survive Streamlit reruns."
         )
 
         st.code(
@@ -3262,7 +3261,7 @@ SOURCE MATERIAL:
     st.divider()
 
     st.markdown(
-        "### 📖 Research 🏎️ WORKspace"
+        "### 📖 Research Workspace"
     )
 
     tab1, tab2, tab3 = st.tabs(
@@ -3602,7 +3601,7 @@ def render_agentic():
                 )
 
                 status.update(
-                    label="🏎️ WORKflow complete",
+                    label="Workflow complete",
                     state="complete",
                 )
 
@@ -4094,7 +4093,7 @@ def _sf_focus_render_global():
 
     Layout:
         Row 1: SOUL FORGE + SYSTEM STATUS
-        Row 2: 🗡️ ACTIVE TASK + 🌀 PHASE + TIMER + CONTROLS
+        Row 2: ACTIVE TASK + PHASE + TIMER + CONTROLS
 
     This renderer is intentionally compact and native Streamlit.
     """
@@ -4134,7 +4133,7 @@ def _sf_focus_render_global():
         st.session_state.sf_active_task = "ONE-TASK"
 
     # -------------------------------------------------------------------------
-    # DISCOVER 🗡️ ACTIVE TASK FROM EXISTING TASK DATA
+    # DISCOVER ACTIVE TASK FROM EXISTING TASK DATA
     # -------------------------------------------------------------------------
 
     project_root = Path("/content/BANKAI-RACE-CONTROL")
@@ -4282,7 +4281,7 @@ def _sf_focus_render_global():
             st.session_state.sf_timer_last_tick = now
 
             # ---------------------------------------------------------------
-            # 🏆 TIMER COMPLETE
+            # TIMER COMPLETE
             # ---------------------------------------------------------------
 
             if st.session_state.sf_focus_seconds <= 0:
@@ -4325,7 +4324,7 @@ def _sf_focus_render_global():
 
     with task_col:
 
-        st.caption("⚔️ 🗡️ ACTIVE TASK")
+        st.caption("🎯 ACTIVE TASK")
 
         st.markdown(
             f"**{st.session_state.sf_active_task}**"
@@ -4397,20 +4396,20 @@ def _sf_focus_render_global():
         if st.button(
             "⏭️",
             key="sf_compact_skip",
-            help="⏭️ SKIP interval",
+            help="Skip interval",
             use_container_width=True,
         ):
             _sf_skip_timer()
             st.rerun()
 
     # -------------------------------------------------------------------------
-    # 🏆 TIMER COMPLETE — COMPACT SINGLE LINE
+    # TIMER COMPLETE — COMPACT SINGLE LINE
     # -------------------------------------------------------------------------
 
     if st.session_state.sf_timer_complete:
 
         st.info(
-            f"⏰ **🏆 TIMER COMPLETE** — "
+            f"⏰ **TIMER COMPLETE** — "
             f"{st.session_state.sf_active_task} — "
             f"{st.session_state.sf_phase} interval finished.",
             icon="⏰",
@@ -4471,7 +4470,7 @@ def _sf_render_pomodoro_page():
     # PAGE HEADER
     # -------------------------------------------------------------------------
 
-    st.title("🏎️ POMODORO")
+    st.title("🍅 POMODORO")
 
     st.caption(
         "Configure your focus intervals and control the Pomodoro timer."
@@ -4490,7 +4489,7 @@ def _sf_render_pomodoro_page():
 
     with work_col:
         work_minutes = st.number_input(
-            "🏎️ WORK",
+            "Work",
             min_value=1,
             max_value=180,
             value=int(st.session_state.sf_work_minutes),
@@ -4500,7 +4499,7 @@ def _sf_render_pomodoro_page():
 
     with break_col:
         break_minutes = st.number_input(
-            "🟡 BREAK",
+            "Break",
             min_value=1,
             max_value=60,
             value=int(st.session_state.sf_break_minutes),
@@ -4510,7 +4509,7 @@ def _sf_render_pomodoro_page():
 
     with long_col:
         long_break_minutes = st.number_input(
-            "Long 🟡 BREAK",
+            "Long Break",
             min_value=1,
             max_value=120,
             value=int(st.session_state.sf_long_break_minutes),
@@ -4578,14 +4577,14 @@ def _sf_render_pomodoro_page():
         )
 
         st.metric(
-            "🗡️ ACTIVE TASK",
+            "ACTIVE TASK",
             str(active_task)[:32],
         )
 
     with phase_col:
 
         st.metric(
-            "🌀 PHASE",
+            "PHASE",
             str(
                 st.session_state.get(
                     "sf_phase",
@@ -4702,7 +4701,7 @@ def _sf_render_pomodoro_page():
     ):
 
         st.warning(
-            "⏰ 🏆 TIMER COMPLETE",
+            "⏰ TIMER COMPLETE",
             icon="⏰",
         )
 
@@ -4723,19 +4722,16 @@ def _sf_focus_render_task_selector():
 # === SOUL FORGE GLOBAL HEADER CALL END ===
 
 # ============================================================================
-# SOUL FORGE — GLOBAL POMODORO / 🗡️ ACTIVE TASK
+# SOUL FORGE — GLOBAL POMODORO / ACTIVE TASK
 # Rendered BEFORE the page router so it stays visible on every page.
 # ============================================================================
 if st.session_state.get("page") != "Pomodoro":
     _sf_focus_render_global()
 
-if st.session_state.page == "GitHub Delivery":
-    _sf_github_delivery_page()
-elif (
+if (
     st.session_state.page
     == "Command Center"
 ):
-
 
     render_command_center()
 
@@ -4775,7 +4771,7 @@ elif (
     render_pitmydoro()
 elif (
     st.session_state.page
-    == "⚔️ Task Manager"
+    == "Task Manager"
 ):
     render_task_manager()
 
