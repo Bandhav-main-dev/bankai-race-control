@@ -9,6 +9,18 @@
 # =============================================================================
 
 
+# =============================================================================
+# SOUL FORGE DEPLOYMENT IMPORT BOOTSTRAP
+# =============================================================================
+
+import sys
+from pathlib import Path
+
+_SF_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+if str(_SF_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SF_REPO_ROOT))
+
 from app.services.soul_forge_github_page import _sf_github_delivery_page
 def _sf_memory_get_project_name():
 
