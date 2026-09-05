@@ -560,17 +560,124 @@ def _sf_load_tasks():
 
 
 def _sf_save_tasks(tasks):
-    SOUL_FORGE_TASK_FILE.parent.mkdir(
-        parents=True,
-        exist_ok=True,
+    """
+    Permission-safe SOUL FORGE task persistence.
+
+    Streamlit Cloud may mount the application source tree as read-only.
+    Therefore task writes must never assume that SOUL_FORGE_TASK_FILE is
+    writable.
+
+    Priority:
+        1. Configured task file when writable.
+        2. /tmp/soul_forge/data/tasks.json
+        3. TMPDIR/soul_forge/data/tasks.json
+
+    The current task list is also retained in Streamlit session state so
+    Task Manager operations do not crash when persistent storage is unavailable.
+    """
+    import json
+    import os
+    from pathlib import Path
+
+    # Always keep current task state for this Streamlit session.
+    try:
+        st.session_state["sf_tasks"] = tasks
+    except Exception:
+        pass
+
+    configured_path = Path(SOUL_FORGE_TASK_FILE)
+
+    candidates = [
+        configured_path,
+        Path("/tmp/soul_forge/data/tasks.json"),
+        Path(os.environ.get("TMPDIR", "/tmp"))
+        / "soul_forge"
+        / "data"
+        / "tasks.json",
+    ]
+
+    unique_candidates = []
+    seen = set()
+
+    for candidate in candidates:
+        candidate = Path(candidate)
+        key = str(candidate)
+
+        if key not in seen:
+            seen.add(key)
+            unique_candidates.append(candidate)
+
+    payload = json.dumps(
+        tasks,
+        indent=2,
+        ensure_ascii=False,
     )
 
-    SOUL_FORGE_TASK_FILE.write_text(
-        json.dumps(tasks, indent=2),
-        encoding="utf-8",
-    )
+    last_error = None
 
+    for task_path in unique_candidates:
+        try:
+            task_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
 
+            # Test directory write permission.
+            test_file = task_path.parent / ".soul_forge_write_test"
+
+            try:
+                test_file.write_text(
+                    "ok",
+                    encoding="utf-8",
+                )
+                test_file.unlink(missing_ok=True)
+
+            except Exception as exc:
+                last_error = exc
+                continue
+
+            # Write through a temporary file.
+            temp_path = task_path.with_suffix(
+                task_path.suffix + ".tmp"
+            )
+
+            temp_path.write_text(
+                payload,
+                encoding="utf-8",
+            )
+
+            temp_path.replace(task_path)
+
+            try:
+                st.session_state["sf_task_storage_path"] = str(
+                    task_path
+                )
+                st.session_state["sf_task_storage_ok"] = True
+                st.session_state.pop(
+                    "sf_task_storage_error",
+                    None,
+                )
+            except Exception:
+                pass
+
+            return True
+
+        except (PermissionError, OSError, IOError) as exc:
+            last_error = exc
+            continue
+
+        except Exception as exc:
+            last_error = exc
+            continue
+
+    # Never crash Task Manager because persistence is unavailable.
+    try:
+        st.session_state["sf_task_storage_ok"] = False
+        st.session_state["sf_task_storage_error"] = str(last_error)
+    except Exception:
+        pass
+
+    return False
 def _sf_task_id(tasks):
     numbers = []
 
