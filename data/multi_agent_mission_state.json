@@ -1,20 +1,20 @@
 {
   "version": "0.6.2",
-  "saved_at": "2026-09-03T17:25:14.832912+00:00",
+  "saved_at": "2026-09-06T07:53:49.091464+00:00",
   "missions": {
-    "mission-c90b6d0f5e1c": {
-      "mission_id": "mission-c90b6d0f5e1c",
+    "mission-afc0baba4fa3": {
+      "mission_id": "mission-afc0baba4fa3",
       "objective": "Test repair history",
       "phase": "created",
-      "created_at": "2026-09-03T17:25:14.832898+00:00",
-      "updated_at": "2026-09-03T17:25:14.832907+00:00",
+      "created_at": "2026-09-06T07:53:49.091451+00:00",
+      "updated_at": "2026-09-06T07:53:49.091460+00:00",
       "plan": null,
       "implementation": null,
       "validation": null,
       "review": null,
       "history": [
         {
-          "timestamp": "2026-09-03T17:25:14.832898+00:00",
+          "timestamp": "2026-09-06T07:53:49.091451+00:00",
           "from": null,
           "to": "created"
         }
