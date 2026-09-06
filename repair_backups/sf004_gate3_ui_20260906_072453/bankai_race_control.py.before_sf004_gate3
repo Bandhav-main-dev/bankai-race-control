@@ -56,41 +56,6 @@ _SF_GITHUB_PAGE_SPEC.loader.exec_module(
 _sf_github_delivery_page = (
     _SF_GITHUB_PAGE_MODULE._sf_github_delivery_page
 )
-
-# SF-004 KNOWLEDGE SERVICE HELPERS
-def sf004_get_live_knowledge(
-    query: str,
-    notebook_id: str | None = None,
-):
-    """Retrieve live knowledge context safely."""
-
-    if not SF004_KNOWLEDGE_AVAILABLE:
-        return [], ""
-
-    if not query or not query.strip():
-        return [], ""
-
-    try:
-        return sf004_build_knowledge_context(
-            query,
-            notebook_id,
-        )
-    except Exception:
-        return [], ""
-
-
-def sf004_get_notebooks():
-    """Return registered notebooks safely."""
-
-    if not SF004_KNOWLEDGE_AVAILABLE:
-        return []
-
-    try:
-        return sf004_list_notebooks()
-    except Exception:
-        return []
-
-
 def _sf_memory_get_project_name():
 
     try:
@@ -270,36 +235,6 @@ from datetime import date, datetime, timedelta
 import time
 
 import streamlit as st
-
-
-# SF-004 LIVE KNOWLEDGE BRIDGE
-#
-# Connects the existing Knowledge Studio UI
-# to the reconstructed SF-004 Knowledge Service.
-#
-# This bridge does not replace existing UI logic.
-
-try:
-    from app.services.soul_forge_knowledge_service import (
-        answerable_resources as sf004_answerable_resources,
-        build_knowledge_context as sf004_build_knowledge_context,
-        search_knowledge as sf004_search_knowledge,
-    )
-
-    from app.services.soul_forge_notebook_manager import (
-        list_notebooks as sf004_list_notebooks,
-    )
-
-    SF004_KNOWLEDGE_AVAILABLE = True
-
-except Exception:
-
-    SF004_KNOWLEDGE_AVAILABLE = False
-
-    sf004_answerable_resources = None
-    sf004_build_knowledge_context = None
-    sf004_search_knowledge = None
-    sf004_list_notebooks = None
 
 
 # =============================================================================
