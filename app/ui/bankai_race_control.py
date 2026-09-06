@@ -13,6 +13,7 @@
 # SOUL FORGE DEPLOYMENT IMPORT BOOTSTRAP
 # =============================================================================
 
+import re
 import sys
 from pathlib import Path
 
