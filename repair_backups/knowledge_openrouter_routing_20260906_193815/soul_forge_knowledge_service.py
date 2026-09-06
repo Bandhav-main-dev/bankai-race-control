@@ -44,7 +44,7 @@ def ask_knowledge(
     notebook_id: str | None = None,
     *,
     top_k: int = 8,
-    provider: str = "openrouter",
+    provider: str = "gemini",
     model: str | None = None,
 ) -> dict[str, Any]:
 
