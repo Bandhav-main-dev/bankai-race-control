@@ -27,3 +27,6 @@ pytest
 ruff
 mypy
 pyyaml
+
+# PDF ingestion
+pypdf>=6.0

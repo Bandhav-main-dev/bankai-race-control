@@ -180,7 +180,195 @@ def _result_score(item: Any):
 # Ingestion compatibility adapter
 # -----------------------------------------------------------------------------
 
+def _ingest_uploaded_file(
+    uploaded_file,
+    notebook_id: str,
+):
+    """
+    Persist a Streamlit UploadedFile temporarily and send it through the
+    canonical Soul Forge ingestion service.
 
+    The ingestion service owns:
+        - PDF/DOCX/text extraction
+        - metadata creation
+        - SHA256 calculation
+        - RAG indexing
+        - notebook scoping
+
+    The UI adapter owns only:
+        - temporary file handling
+        - resource ID creation
+        - compatibility with the Streamlit uploader
+    """
+
+    if ingest_file is None:
+        error = globals().get(
+            "_INGESTION_ERROR",
+            "Soul Forge ingestion service is unavailable.",
+        )
+
+        raise RuntimeError(
+            error
+        )
+
+    if uploaded_file is None:
+        raise ValueError(
+            "No uploaded file was supplied."
+        )
+
+    filename = Path(
+        uploaded_file.name
+    ).name
+
+    if not filename:
+        raise ValueError(
+            "Uploaded file has no valid filename."
+        )
+
+    suffix = Path(
+        filename
+    ).suffix.lower()
+
+    supported = {
+        ".pdf",
+        ".docx",
+        ".txt",
+        ".md",
+        ".markdown",
+        ".csv",
+        ".json",
+        ".py",
+    }
+
+    if suffix not in supported:
+        raise ValueError(
+            f"Unsupported file type: {suffix}"
+        )
+
+    # ---------------------------------------------------------
+    # Resource ID
+    # ---------------------------------------------------------
+
+    file_bytes = uploaded_file.getvalue()
+
+    if not file_bytes:
+        raise ValueError(
+            f"{filename} is empty."
+        )
+
+    resource_hash = hashlib.sha256(
+        file_bytes
+    ).hexdigest()
+
+    resource_id = (
+        f"upload-{resource_hash[:24]}"
+    )
+
+    # ---------------------------------------------------------
+    # Temporary file
+    # ---------------------------------------------------------
+
+    temp_path = None
+
+    try:
+
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            suffix=suffix,
+            prefix="sf004_",
+            delete=False,
+        ) as temp:
+
+            temp.write(
+                file_bytes
+            )
+
+            temp_path = Path(
+                temp.name
+            )
+
+        # -----------------------------------------------------
+        # Canonical ingestion call
+        # -----------------------------------------------------
+
+        signature = inspect.signature(
+            ingest_file
+        )
+
+        kwargs = {
+            "path": temp_path,
+            "resource_id": resource_id,
+            "notebook_id": notebook_id,
+            "name": filename,
+        }
+
+        # Keep this compatible with older/newer ingestion signatures.
+        accepted = set(
+            signature.parameters.keys()
+        )
+
+        kwargs = {
+            key: value
+            for key, value in kwargs.items()
+            if key in accepted
+        }
+
+        if "path" not in kwargs:
+            raise RuntimeError(
+                "Ingestion service does not accept 'path'."
+            )
+
+        if "resource_id" not in kwargs:
+            raise RuntimeError(
+                "Ingestion service does not accept 'resource_id'."
+            )
+
+        if "notebook_id" not in kwargs:
+            raise RuntimeError(
+                "Ingestion service does not accept 'notebook_id'."
+            )
+
+        result = ingest_file(
+            **kwargs
+        )
+
+        if not isinstance(result, dict):
+            result = {
+                "result": result,
+            }
+
+        result.setdefault(
+            "resource_id",
+            resource_id,
+        )
+
+        result.setdefault(
+            "notebook_id",
+            notebook_id,
+        )
+
+        result.setdefault(
+            "name",
+            filename,
+        )
+
+        result.setdefault(
+            "size_bytes",
+            len(file_bytes),
+        )
+
+        return result
+
+    finally:
+
+        if temp_path is not None:
+
+            try:
+                temp_path.unlink(
+                    missing_ok=True
+                )
+            except Exception:
+                pass
 
 # -----------------------------------------------------------------------------
 # Stats
