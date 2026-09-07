@@ -257,6 +257,7 @@ class OpenRouterProvider:
         models = self.get_models(task)
 
         if not models:
+
             raise RuntimeError(
                 f"No models configured for task {task}"
             )
@@ -264,6 +265,7 @@ class OpenRouterProvider:
         messages = []
 
         if system:
+
             messages.append(
                 {
                     "role": "system",
@@ -278,116 +280,59 @@ class OpenRouterProvider:
             }
         )
 
-        last_error = None
+        started = time.time()
 
-        # -------------------------------------------------------------------------
-        # Explicit model fallback.
-        #
-        # The configured OpenRouter model chain is attempted sequentially.
-        # -------------------------------------------------------------------------
+        response = self.client.chat.completions.create(
 
-        for index, model in enumerate(models):
+            model=models[0],
 
-            started = time.time()
+            messages=messages,
 
-            try:
+            temperature=temperature,
 
-                response = self.client.chat.completions.create(
+            max_tokens=max_tokens,
 
-                    model=model,
-
-                    messages=messages,
-
-                    temperature=temperature,
-
-                    max_tokens=max_tokens,
-
-                    extra_body={
-                        "models": models[index:],
-                    },
-                )
-
-                elapsed = (
-                    time.time()
-                    - started
-                )
-
-                content = self.extract_content(
-                    response
-                )
-
-                selected_model = getattr(
-                    response,
-                    "model",
-                    model,
-                )
-
-                if not content:
-                    raise RuntimeError(
-                        f"OpenRouter returned empty content for model {model}"
-                    )
-
-                return {
-                    "success": True,
-
-                    "provider": "openrouter",
-
-                    "task": task,
-
-                    "tier": self.get_tier(task),
-
-                    "requested_model": models[0],
-
-                    "requested_models": models,
-
-                    "selected_model": selected_model,
-
-                    "attempted_model": model,
-
-                    "attempt_number": index + 1,
-
-                    "content": content,
-
-                    "elapsed": elapsed,
-
-                    "response": response,
-                }
-
-            except Exception as exc:
-
-                last_error = exc
-
-                print(
-                    f"[WARN] OpenRouter model failed "
-                    f"({index + 1}/{len(models)}): {model}"
-                )
-
-                print(
-                    f"       {type(exc).__name__}: {exc}"
-                )
-
-                if index < len(models) - 1:
-
-                    print(
-                        f"[FALLBACK] Trying next model: "
-                        f"{models[index + 1]}"
-                    )
-
-                    continue
-
-                break
-
-        # -------------------------------------------------------------------------
-        # All configured models failed.
-        # Re-raise the final real exception.
-        # -------------------------------------------------------------------------
-
-        if last_error is not None:
-            raise last_error
-
-        raise RuntimeError(
-            f"OpenRouter generation failed for task {task}"
+            extra_body={
+                "models": models,
+            },
         )
+
+        elapsed = (
+            time.time()
+            - started
+        )
+
+        content = self.extract_content(
+            response
+        )
+
+        selected_model = getattr(
+            response,
+            "model",
+            models[0],
+        )
+
+        return {
+            "success": bool(content),
+
+            "provider": "openrouter",
+
+            "task": task,
+
+            "tier": self.get_tier(task),
+
+            "requested_model": models[0],
+
+            "requested_models": models,
+
+            "selected_model": selected_model,
+
+            "content": content,
+
+            "elapsed": elapsed,
+
+            "response": response,
+        }
 
     # -------------------------------------------------------------------------
     # SIMPLE COMPATIBILITY API

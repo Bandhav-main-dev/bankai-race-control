@@ -58,8 +58,6 @@ _sf_github_delivery_page = (
 )
 
 # SF-004 KNOWLEDGE SERVICE HELPERS
-from app.ui.soul_forge_knowledge_panel import render_soul_forge_knowledge_panel
-
 def sf004_get_live_knowledge(
     query: str,
     notebook_id: str | None = None,
@@ -2852,13 +2850,659 @@ def render_projects():
 
 
 def render_knowledge():
-    """Render the SF-004 Soul Forge Knowledge workspace."""
-    try:
-        render_soul_forge_knowledge_panel()
-    except Exception as exc:
-        st.error("SF-004 Knowledge Panel failed to render.")
-        st.exception(exc)
 
+    st.subheader(
+        "📚 Knowledge Studio"
+    )
+
+    st.caption(
+        "NotebookLM-inspired source-grounded research workspace."
+    )
+
+    # -------------------------------------------------------------------------
+    # SESSION STATE
+    # -------------------------------------------------------------------------
+
+    if "knowledge_sources" not in st.session_state:
+
+        st.session_state.knowledge_sources = []
+
+    if "knowledge_selected" not in st.session_state:
+
+        st.session_state.knowledge_selected = []
+
+    if "knowledge_answer" not in st.session_state:
+
+        st.session_state.knowledge_answer = ""
+
+    if "knowledge_question" not in st.session_state:
+
+        st.session_state.knowledge_question = ""
+
+    if "knowledge_notes" not in st.session_state:
+
+        st.session_state.knowledge_notes = ""
+
+    # -------------------------------------------------------------------------
+    # SOURCE COUNTS
+    # -------------------------------------------------------------------------
+
+    sources = st.session_state.knowledge_sources
+
+    source_count = len(sources)
+
+    total_words = sum(
+        item.get("words", 0)
+        for item in sources
+        if isinstance(item, dict)
+    )
+
+    # -------------------------------------------------------------------------
+    # HEADER METRICS
+    # -------------------------------------------------------------------------
+
+    m1, m2, m3, m4 = st.columns(
+        4,
+        gap="small",
+    )
+
+    with m1:
+
+        st.metric(
+            "SOURCES",
+            source_count,
+        )
+
+    with m2:
+
+        st.metric(
+            "WORDS",
+            f"{total_words:,}",
+        )
+
+    with m3:
+
+        st.metric(
+            "SELECTED",
+            len(
+                st.session_state.knowledge_selected
+            ),
+        )
+
+    with m4:
+
+        st.metric(
+            "INDEX",
+            "READY"
+            if source_count
+            else "EMPTY",
+        )
+
+    st.divider()
+
+    # =========================================================================
+    # MAIN WORKSPACE
+    # =========================================================================
+
+    source_col, research_col = st.columns(
+        [1, 2.5],
+        gap="large",
+    )
+
+    # =========================================================================
+    # SOURCE LIBRARY
+    # =========================================================================
+
+    with source_col:
+
+        st.markdown(
+            "### 📄 Sources"
+        )
+
+        st.caption(
+            "Add documents and choose which sources SOUL FORGE can use."
+        )
+
+        uploaded_files = st.file_uploader(
+            "Add sources",
+            type=[
+                "txt",
+                "md",
+                "pdf",
+                "csv",
+                "json",
+                "py",
+            ],
+            accept_multiple_files=True,
+            key="knowledge_uploads",
+        )
+
+        if uploaded_files:
+
+            for uploaded in uploaded_files:
+
+                existing_names = [
+                    item.get("name")
+                    for item in sources
+                    if isinstance(item, dict)
+                ]
+
+                if uploaded.name not in existing_names:
+
+                    try:
+
+                        raw = uploaded.read()
+
+                        text = raw.decode(
+                            "utf-8",
+                            errors="replace",
+                        )
+
+                        words = len(
+                            re.findall(
+                                r"\b\w+\b",
+                                text,
+                            )
+                        )
+
+                        sources.append(
+                            {
+                                "name":
+                                    uploaded.name,
+
+                                "text":
+                                    text,
+
+                                "words":
+                                    words,
+
+                                "size":
+                                    len(raw),
+
+                                "added":
+                                    datetime.now().isoformat(
+                                        timespec="seconds"
+                                    ),
+                            }
+                        )
+
+                        st.session_state.knowledge_sources = (
+                            sources
+                        )
+
+                    except Exception as exc:
+
+                        st.error(
+                            f"{uploaded.name}: {exc}"
+                        )
+
+            st.rerun()
+
+        st.divider()
+
+        if sources:
+
+            st.markdown(
+                "#### Source Library"
+            )
+
+            for index, source in enumerate(
+                sources
+            ):
+
+                name = source.get(
+                    "name",
+                    f"Source {index + 1}",
+                )
+
+                selected = (
+                    index
+                    in st.session_state.knowledge_selected
+                )
+
+                toggle = st.checkbox(
+                    name,
+                    value=selected,
+                    key=f"knowledge_source_{index}",
+                )
+
+                if toggle:
+
+                    if (
+                        index
+                        not in st.session_state.knowledge_selected
+                    ):
+
+                        st.session_state.knowledge_selected.append(
+                            index
+                        )
+
+                else:
+
+                    if (
+                        index
+                        in st.session_state.knowledge_selected
+                    ):
+
+                        st.session_state.knowledge_selected.remove(
+                            index
+                        )
+
+            st.divider()
+
+            st.markdown(
+                "#### Source Actions"
+            )
+
+            c1, c2 = st.columns(
+                2,
+                gap="small",
+            )
+
+            with c1:
+
+                if st.button(
+                    "✓ ALL",
+                    use_container_width=True,
+                ):
+
+                    st.session_state.knowledge_selected = (
+                        list(range(len(sources)))
+                    )
+
+                    st.rerun()
+
+            with c2:
+
+                if st.button(
+                    "CLEAR",
+                    use_container_width=True,
+                ):
+
+                    st.session_state.knowledge_selected = []
+
+                    st.rerun()
+
+        else:
+
+            st.info(
+                "No sources yet.\n\n"
+                "Upload Markdown, text, PDF, CSV, JSON or Python files."
+            )
+
+        st.divider()
+
+        st.markdown(
+            "#### 📊 Source Status"
+        )
+
+        if sources:
+
+            st.success(
+                "SOURCE INDEX READY"
+            )
+
+            st.caption(
+                f"{source_count} source(s) loaded"
+            )
+
+            st.caption(
+                f"{total_words:,} words available"
+            )
+
+        else:
+
+            st.warning(
+                "SOURCE LIBRARY EMPTY"
+            )
+
+    # =========================================================================
+    # RESEARCH CHAT
+    # =========================================================================
+
+    with research_col:
+
+        st.markdown(
+            "### 🧠 Research Chat"
+        )
+
+        selected_sources = [
+
+            sources[index]
+
+            for index
+            in st.session_state.knowledge_selected
+
+            if (
+                0 <= index < len(sources)
+            )
+
+        ]
+
+        if selected_sources:
+
+            source_names = ", ".join(
+                source.get(
+                    "name",
+                    "Unknown",
+                )
+                for source in selected_sources
+            )
+
+            st.success(
+                f"Using {len(selected_sources)} source(s)"
+            )
+
+            st.caption(
+                source_names
+            )
+
+        else:
+
+            st.info(
+                "Select one or more sources from the left."
+            )
+
+        question = st.text_area(
+            "Research Question",
+            value=(
+                st.session_state.knowledge_question
+            ),
+            placeholder=(
+                "Ask a question about your selected sources..."
+            ),
+            height=130,
+            key="knowledge_question_input",
+        )
+
+        st.session_state.knowledge_question = question
+
+        c1, c2 = st.columns(
+            [3, 1],
+            gap="small",
+        )
+
+        with c1:
+
+            ask = st.button(
+                "🔍 ASK SOUL FORGE",
+                use_container_width=True,
+                type="primary",
+            )
+
+        with c2:
+
+            clear_answer = st.button(
+                "CLEAR",
+                use_container_width=True,
+            )
+
+        if clear_answer:
+
+            st.session_state.knowledge_answer = ""
+
+            st.rerun()
+
+        if ask:
+
+            if not selected_sources:
+
+                st.warning(
+                    "Select at least one source."
+                )
+
+            elif not question.strip():
+
+                st.warning(
+                    "Enter a research question."
+                )
+
+            else:
+
+                combined_context = "\n\n".join(
+
+                    (
+                        f"=== SOURCE: "
+                        f"{source.get('name', 'Unknown')} ===\n"
+                        f"{source.get('text', '')}"
+                    )
+
+                    for source
+                    in selected_sources
+
+                )
+
+                research_prompt = f"""
+You are SOUL FORGE Knowledge Research.
+
+Answer the user's question using ONLY the supplied source material.
+
+If the answer is not supported by the sources, clearly say that
+the available sources do not provide enough evidence.
+
+Be precise and structured.
+
+USER QUESTION:
+{question.strip()}
+
+SOURCE MATERIAL:
+{combined_context}
+"""
+
+                with st.spinner(
+                    "SOUL FORGE is researching..."
+                ):
+
+                    try:
+
+                        result = bankai_request(
+                            research_prompt,
+                        )
+
+                        answer = result_text(
+                            result
+                        )
+
+                        st.session_state.knowledge_answer = (
+                            answer
+                        )
+
+                    except Exception as exc:
+
+                        st.session_state.knowledge_answer = (
+                            f"Knowledge research error: {exc}"
+                        )
+
+        # ---------------------------------------------------------------------
+        # ANSWER
+        # ---------------------------------------------------------------------
+
+        if (
+            st.session_state.knowledge_answer
+        ):
+
+            st.divider()
+
+            st.markdown(
+                "### 💡 Answer"
+            )
+
+            st.write(
+                st.session_state.knowledge_answer
+            )
+
+            st.divider()
+
+            st.markdown(
+                "### 📌 Sources Used"
+            )
+
+            for source in selected_sources:
+
+                st.caption(
+                    f"📄 {source.get('name', 'Unknown')}"
+                )
+
+        # ---------------------------------------------------------------------
+        # NOTES
+        # ---------------------------------------------------------------------
+
+        st.divider()
+
+        st.markdown(
+            "### 📝 Research Notes"
+        )
+
+        st.session_state.knowledge_notes = (
+            st.text_area(
+                "Notes",
+                value=(
+                    st.session_state.knowledge_notes
+                ),
+                placeholder=(
+                    "Save ideas, findings, hypotheses or follow-up questions..."
+                ),
+                height=150,
+                label_visibility="collapsed",
+                key="knowledge_notes_input",
+            )
+        )
+
+    # =========================================================================
+    # BOTTOM RESEARCH TOOLS
+    # =========================================================================
+
+    st.divider()
+
+    st.markdown(
+        "### 📖 Research 🏎️ WORKspace"
+    )
+
+    tab1, tab2, tab3 = st.tabs(
+        [
+            "📄 SOURCES",
+            "💬 CHAT",
+            "🎯 STUDY",
+        ]
+    )
+
+    with tab1:
+
+        if sources:
+
+            for source in sources:
+
+                with st.expander(
+                    f"📄 {source.get('name', 'Unknown')}"
+                ):
+
+                    st.caption(
+                        f"{source.get('words', 0):,} words"
+                    )
+
+                    text = source.get(
+                        "text",
+                        "",
+                    )
+
+                    if len(text) > 5000:
+
+                        st.text(
+                            text[:5000]
+                        )
+
+                        st.caption(
+                            "Preview limited to 5,000 characters."
+                        )
+
+                    else:
+
+                        st.text(
+                            text
+                        )
+
+        else:
+
+            st.info(
+                "Upload sources to inspect them here."
+            )
+
+    with tab2:
+
+        if st.session_state.knowledge_answer:
+
+            st.write(
+                st.session_state.knowledge_answer
+            )
+
+        else:
+
+            st.info(
+                "Your research answers will appear here."
+            )
+
+    with tab3:
+
+        st.markdown(
+            "#### 🎯 Study Mode"
+        )
+
+        st.caption(
+            "Turn your sources into active learning."
+        )
+
+        if sources:
+
+            study_topics = [
+
+                source.get(
+                    "name",
+                    "Source",
+                )
+
+                for source
+                in sources
+
+            ]
+
+            topic = st.selectbox(
+                "Study Source",
+                study_topics,
+            )
+
+            st.write(
+                "Use Research Chat to ask for:"
+            )
+
+            st.write(
+                "• summaries"
+            )
+
+            st.write(
+                "• explanations"
+            )
+
+            st.write(
+                "• key concepts"
+            )
+
+            st.write(
+                "• comparisons"
+            )
+
+            st.write(
+                "• questions"
+            )
+
+            st.write(
+                "• revision material"
+            )
+
+        else:
+
+            st.info(
+                "Add sources to activate Study Mode."
+            )
 
 
 # =============================================================================
