@@ -1,37 +1,4 @@
 
-# ================================================================
-# SOUL FORGE — EARLY .ENV BOOTSTRAP
-# Must remain at module level before application imports.
-# ================================================================
-
-_SF_STREAMLIT_ENV_BOOTSTRAP = True
-
-try:
-    import os as _sf_os
-    from pathlib import Path as _SFPath
-
-    _SF_PROJECT_ROOT = _SFPath(__file__).resolve().parents[2]
-    _SF_ENV_FILE = _SF_PROJECT_ROOT / ".env"
-
-    if _SF_ENV_FILE.exists():
-        try:
-            from dotenv import load_dotenv as _sf_load_dotenv
-
-            _sf_load_dotenv(
-                _SF_ENV_FILE,
-                override=False,
-            )
-        except ImportError:
-            # python-dotenv is optional here.
-            # The provider itself also attempts to load .env.
-            pass
-
-except Exception as _sf_env_error:
-    print(
-        f"[SOUL FORGE] .env loading warning: {_sf_env_error}"
-    )
-
-
 # ============================================================================
 # ⚔️ SOUL FORGE MEMORY HELPERS V1
 # ============================================================================
@@ -307,22 +274,6 @@ import time
 import streamlit as st
 
 import inspect
-from app.ui.soul_forge_github_delivery_ui import render_github_delivery
-
-from app.core.timer.pomodoro_engine import (
-    _sf_focus_init,
-    _sf_focus_now,
-    _sf_focus_recalculate,
-    _sf_focus_format,
-    _sf_focus_start,
-    _sf_focus_pause,
-    _sf_focus_resume,
-    _sf_focus_restart,
-    _sf_focus_stop,
-    _sf_focus_complete,
-)
-from app.ui.components.timer_bar import render_timer_bar
-
 
 
 
@@ -1177,26 +1128,257 @@ Rules:
 
 SF_FOCUS_VERSION = "1.0.0"
 
+SF_FOCUS_QUOTES = [
+    "One task. One target. No distraction.",
+    "Discipline creates momentum.",
+    "Build first. Perfect later.",
+    "The next lap starts now.",
+    "Small progress is still progress.",
+    "Focus is a superpower when you protect it.",
+    "You don't need more time. You need better focus.",
+    "One completed session moves the project forward.",
+    "Stay in the lane. Finish the task.",
+    "Bankai is control — control your focus.",
+    "Your future system is being built right now.",
+    "Don't watch the clock. Use it.",
+]
 
 
+def _sf_focus_init():
+    """Initialize the global SOUL FORGE focus session."""
+
+    defaults = {
+        "sf_focus_active": False,
+        "sf_focus_paused": False,
+        "sf_focus_task_id": None,
+        "sf_focus_task_title": "",
+        "sf_focus_project": "",
+        "sf_focus_priority": "",
+        "sf_focus_duration_seconds": 25 * 60,
+        "sf_focus_remaining_seconds": 25 * 60,
+        "sf_focus_started_at": None,
+        "sf_focus_pause_started_at": None,
+        "sf_focus_total_paused_seconds": 0,
+        "sf_focus_quote_index": 0,
+        "sf_focus_completed_sessions": 0,
+        "sf_focus_total_seconds_today": 0,
+        "sf_focus_session_start": None,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
+def _sf_focus_now():
+    return datetime.now()
 
 
+def _sf_focus_recalculate():
+    """
+    Calculate remaining time from timestamps.
+
+    This is intentionally timestamp based instead of relying on a loop.
+    Streamlit reruns the application frequently, so this keeps the timer
+    consistent when the user changes pages.
+    """
+
+    if not st.session_state.sf_focus_active:
+        return
+
+    if st.session_state.sf_focus_paused:
+        return
+
+    started_at = st.session_state.sf_focus_started_at
+
+    if not started_at:
+        return
+
+    if isinstance(started_at, str):
+        try:
+            started_at = datetime.fromisoformat(started_at)
+        except Exception:
+            return
+
+    total = int(st.session_state.sf_focus_duration_seconds)
+
+    paused = int(st.session_state.sf_focus_total_paused_seconds)
+
+    elapsed = (
+        _sf_focus_now() - started_at
+    ).total_seconds()
+
+    remaining = max(
+        0,
+        int(total - elapsed + paused)
+    )
+
+    st.session_state.sf_focus_remaining_seconds = remaining
+
+    if remaining <= 0:
+        _sf_focus_complete()
 
 
+def _sf_focus_format(seconds):
+    seconds = max(0, int(seconds))
+
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+    return f"{minutes:02d}:{secs:02d}"
 
 
+def _sf_focus_start(
+    task_id,
+    task_title,
+    duration_seconds,
+    project="",
+    priority="",
+):
+    """Start a new focus session."""
+
+    _sf_focus_init()
+
+    now = _sf_focus_now()
+
+    st.session_state.sf_focus_active = True
+    st.session_state.sf_focus_paused = False
+
+    st.session_state.sf_focus_task_id = str(task_id)
+    st.session_state.sf_focus_task_title = str(task_title)
+    st.session_state.sf_focus_project = str(project or "")
+    st.session_state.sf_focus_priority = str(priority or "")
+
+    st.session_state.sf_focus_duration_seconds = int(
+        duration_seconds
+    )
+
+    st.session_state.sf_focus_remaining_seconds = int(
+        duration_seconds
+    )
+
+    st.session_state.sf_focus_started_at = now.isoformat()
+    st.session_state.sf_focus_pause_started_at = None
+    st.session_state.sf_focus_total_paused_seconds = 0
+    st.session_state.sf_focus_session_start = now.isoformat()
+
+    st.session_state.sf_focus_quote_index = (
+        st.session_state.sf_focus_quote_index + 1
+    ) % len(SF_FOCUS_QUOTES)
 
 
+def _sf_focus_pause():
+    """Pause the active focus session."""
+
+    _sf_focus_init()
+
+    if not st.session_state.sf_focus_active:
+        return
+
+    if st.session_state.sf_focus_paused:
+        return
+
+    _sf_focus_recalculate()
+
+    st.session_state.sf_focus_paused = True
+    st.session_state.sf_focus_pause_started_at = (
+        _sf_focus_now().isoformat()
+    )
 
 
+def _sf_focus_resume():
+    """Resume a paused focus session."""
+
+    _sf_focus_init()
+
+    if not st.session_state.sf_focus_active:
+        return
+
+    if not st.session_state.sf_focus_paused:
+        return
+
+    pause_started = st.session_state.sf_focus_pause_started_at
+
+    if pause_started:
+        try:
+            pause_started_dt = datetime.fromisoformat(
+                pause_started
+            )
+
+            paused_seconds = (
+                _sf_focus_now() - pause_started_dt
+            ).total_seconds()
+
+            st.session_state.sf_focus_total_paused_seconds += int(
+                paused_seconds
+            )
+
+        except Exception:
+            pass
+
+    st.session_state.sf_focus_paused = False
+    st.session_state.sf_focus_pause_started_at = None
 
 
+def _sf_focus_restart():
+    """Restart the current task's focus session."""
+
+    _sf_focus_init()
+
+    if not st.session_state.sf_focus_task_id:
+        return
+
+    _sf_focus_start(
+        task_id=st.session_state.sf_focus_task_id,
+        task_title=st.session_state.sf_focus_task_title,
+        duration_seconds=st.session_state.sf_focus_duration_seconds,
+        project=st.session_state.sf_focus_project,
+        priority=st.session_state.sf_focus_priority,
+    )
 
 
+def _sf_focus_stop():
+    """Stop the current focus session."""
+
+    _sf_focus_init()
+
+    st.session_state.sf_focus_active = False
+    st.session_state.sf_focus_paused = False
+
+    st.session_state.sf_focus_task_id = None
+    st.session_state.sf_focus_task_title = ""
+    st.session_state.sf_focus_project = ""
+    st.session_state.sf_focus_priority = ""
+
+    st.session_state.sf_focus_remaining_seconds = 0
+
+    st.session_state.sf_focus_started_at = None
+    st.session_state.sf_focus_pause_started_at = None
+    st.session_state.sf_focus_total_paused_seconds = 0
+    st.session_state.sf_focus_session_start = None
 
 
+def _sf_focus_complete():
+    """Finish a focus session."""
+
+    if not st.session_state.sf_focus_active:
+        return
+
+    duration = int(
+        st.session_state.sf_focus_duration_seconds
+    )
+
+    st.session_state.sf_focus_completed_sessions += 1
+
+    st.session_state.sf_focus_total_seconds_today += duration
+
+    st.session_state.sf_focus_remaining_seconds = 0
+    st.session_state.sf_focus_active = False
+    st.session_state.sf_focus_paused = False
 
 
 # Initialize global focus state as soon as the application loads.
@@ -4003,26 +4185,16 @@ def _sf_focus_render_task_selector():
     return _sf_focus_render_global()
 
 
-
-# ============================================================================
-# SOUL FORGE — INDEPENDENT GLOBAL TIMER BAR
-# ============================================================================
-# Timer UI is independent from page routing.
-#
-# Timer bar:
-#   - reads timer state
-#   - controls timer engine
-#   - does NOT select pages
-#   - does NOT render pages
-#
-# Page router remains responsible for exactly one selected page.
-# ============================================================================
-
-render_timer_bar()
-
 # === SOUL FORGE GLOBAL HEADER END ===
 # === SOUL FORGE GLOBAL HEADER CALL BEGIN ===
 # === SOUL FORGE GLOBAL HEADER CALL END ===
+
+# ============================================================================
+# SOUL FORGE — GLOBAL POMODORO / 🗡️ ACTIVE TASK
+# Rendered BEFORE the page router so it stays visible on every page.
+# ============================================================================
+if st.session_state.get("page") != "Pomodoro":
+    _sf_focus_render_global()
 
 
 
@@ -4533,414 +4705,46 @@ def _sf_kv2_save_resource(
     metadata=None,
 ):
     """
-    Persist one resource inside the selected notebook.
-
-    Source of truth:
-        data/knowledge/notebooks.json
-
-    This function intentionally does NOT modify the RAG index.
-    RAG ingestion is handled by soul_forge_ingestion.
+    Save resource metadata into the selected notebook using the existing
+    notebook storage helper.
     """
+    try:
+        fn = _sf_add_knowledge_resource
 
-    from pathlib import Path as _SFResourcePath
-    from datetime import datetime as _SFResourceDatetime
-    import json as _SFResourceJson
+        sig = inspect.signature(fn)
 
-    # ------------------------------------------------
-    # Resolve project root
-    # ------------------------------------------------
-
-    _sf_root = _SFResourcePath(
-        __file__
-    ).resolve().parents[2]
-
-    _sf_notebooks_file = (
-        _sf_root
-        / "data"
-        / "knowledge"
-        / "notebooks.json"
-    )
-
-    _sf_notebooks_file.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    # ------------------------------------------------
-    # Load existing notebooks.json
-    # ------------------------------------------------
-
-    _sf_data = None
-
-    if _sf_notebooks_file.exists():
-
-        try:
-
-            _sf_data = _SFResourceJson.loads(
-                _sf_notebooks_file.read_text(
-                    encoding="utf-8"
-                )
-            )
-
-        except Exception:
-            _sf_data = None
-
-    # ------------------------------------------------
-    # Preserve existing structure
-    # ------------------------------------------------
-
-    if not isinstance(
-        _sf_data,
-        dict,
-    ):
-
-        _sf_data = {
-            "version": 1,
-            "active_notebook": None,
-            "notebooks": [],
+        values = {
+            "notebook_id": notebook_id,
+            "resource_id": resource_id,
+            "resource_name": resource_name,
+            "name": resource_name,
+            "metadata": metadata or {},
+            "resource": {
+                "resource_id": resource_id,
+                "name": resource_name,
+                "metadata": metadata or {},
+            },
         }
 
-    _sf_data.setdefault(
-        "version",
-        1,
-    )
+        kwargs = {}
 
-    _sf_data.setdefault(
-        "active_notebook",
-        None,
-    )
+        for name in sig.parameters:
+            if name in values:
+                kwargs[name] = values[name]
 
-    _sf_notebooks = _sf_data.get(
-        "notebooks"
-    )
+        if kwargs:
+            return fn(**kwargs)
 
-    if not isinstance(
-        _sf_notebooks,
-        list,
-    ):
-
-        _sf_notebooks = []
-
-        _sf_data["notebooks"] = (
-            _sf_notebooks
+        return fn(
+            notebook_id,
+            resource_id,
+            resource_name,
         )
 
-    # ------------------------------------------------
-    # Normalize target notebook ID
-    # ------------------------------------------------
+    except Exception as e:
+        st.warning(f"Resource metadata could not be saved: {e}")
 
-    _sf_target_id = str(
-        notebook_id or ""
-    ).strip()
-
-    if not _sf_target_id:
-        raise ValueError(
-            "Cannot save resource without notebook_id"
-        )
-
-    # ------------------------------------------------
-    # Find selected notebook
-    # ------------------------------------------------
-
-    _sf_notebook = None
-
-    for _sf_item in _sf_notebooks:
-
-        if not isinstance(
-            _sf_item,
-            dict,
-        ):
-            continue
-
-        _sf_item_id = (
-            _sf_item.get("id")
-            or _sf_item.get("notebook_id")
-            or _sf_item.get("slug")
-            or _sf_item.get("key")
-        )
-
-        if str(
-            _sf_item_id or ""
-        ).strip() == _sf_target_id:
-
-            _sf_notebook = _sf_item
-            break
-
-    # ------------------------------------------------
-    # Safety check
-    # ------------------------------------------------
-
-    if _sf_notebook is None:
-
-        raise ValueError(
-            "Selected notebook was not found in "
-            f"notebooks.json: {_sf_target_id}"
-        )
-
-    # ------------------------------------------------
-    # Ensure resources list exists
-    # ------------------------------------------------
-
-    _sf_resources = _sf_notebook.get(
-        "resources"
-    )
-
-    if _sf_resources is None:
-
-        _sf_resources = []
-
-        _sf_notebook["resources"] = (
-            _sf_resources
-        )
-
-    # ------------------------------------------------
-    # Normalize resource container
-    # ------------------------------------------------
-
-    if isinstance(
-        _sf_resources,
-        dict,
-    ):
-
-        _sf_resources = list(
-            _sf_resources.values()
-        )
-
-        _sf_notebook["resources"] = (
-            _sf_resources
-        )
-
-    if not isinstance(
-        _sf_resources,
-        list,
-    ):
-
-        _sf_resources = []
-
-        _sf_notebook["resources"] = (
-            _sf_resources
-        )
-
-    # ------------------------------------------------
-    # Normalize IDs
-    # ------------------------------------------------
-
-    _sf_resource_id = str(
-        resource_id or ""
-    ).strip()
-
-    _sf_resource_name = str(
-        resource_name or "Untitled resource"
-    ).strip()
-
-    if not _sf_resource_id:
-        raise ValueError(
-            "Cannot save resource without resource_id"
-        )
-
-    # ------------------------------------------------
-    # Metadata
-    # ------------------------------------------------
-
-    _sf_metadata = {}
-
-    if isinstance(
-        metadata,
-        dict,
-    ):
-
-        _sf_metadata.update(
-            metadata
-        )
-
-    _sf_metadata.setdefault(
-        "original_name",
-        _sf_resource_name,
-    )
-
-    _sf_metadata.setdefault(
-        "ingested_at",
-        _SFResourceDatetime.now().isoformat(),
-    )
-
-    # ------------------------------------------------
-    # Resource record
-    # ------------------------------------------------
-
-    _sf_record = {
-        "resource_id": _sf_resource_id,
-        "name": _sf_resource_name,
-        "resource_name": _sf_resource_name,
-        "metadata": _sf_metadata,
-    }
-
-    # ------------------------------------------------
-    # Update existing resource if same ID exists
-    # ------------------------------------------------
-
-    _sf_updated = False
-
-    for _sf_index, _sf_existing in enumerate(
-        _sf_resources
-    ):
-
-        if isinstance(
-            _sf_existing,
-            dict,
-        ):
-
-            _sf_existing_id = (
-                _sf_existing.get(
-                    "resource_id"
-                )
-                or _sf_existing.get(
-                    "id"
-                )
-            )
-
-            if str(
-                _sf_existing_id or ""
-            ).strip() == _sf_resource_id:
-
-                # Preserve any existing metadata.
-                _sf_existing_metadata = (
-                    _sf_existing.get(
-                        "metadata"
-                    )
-                )
-
-                if isinstance(
-                    _sf_existing_metadata,
-                    dict,
-                ):
-
-                    _sf_record["metadata"] = {
-                        **_sf_existing_metadata,
-                        **_sf_metadata,
-                    }
-
-                _sf_resources[
-                    _sf_index
-                ] = _sf_record
-
-                _sf_updated = True
-                break
-
-    # ------------------------------------------------
-    # Add new resource
-    # ------------------------------------------------
-
-    if not _sf_updated:
-
-        _sf_resources.append(
-            _sf_record
-        )
-
-    # ------------------------------------------------
-    # Keep active notebook synchronized
-    # ------------------------------------------------
-
-    _sf_data["active_notebook"] = (
-        _sf_target_id
-    )
-
-    # ------------------------------------------------
-    # Atomic-ish write
-    # ------------------------------------------------
-
-    _sf_temp_file = (
-        _sf_notebooks_file.with_suffix(
-            ".json.tmp"
-        )
-    )
-
-    _sf_temp_file.write_text(
-        _SFResourceJson.dumps(
-            _sf_data,
-            indent=2,
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
-
-    _sf_temp_file.replace(
-        _sf_notebooks_file
-    )
-
-    # ------------------------------------------------
-    # Verify the write immediately
-    # ------------------------------------------------
-
-    _sf_verify = _SFResourceJson.loads(
-        _sf_notebooks_file.read_text(
-            encoding="utf-8"
-        )
-    )
-
-    _sf_verify_notebooks = (
-        _sf_verify.get("notebooks")
-        if isinstance(
-            _sf_verify,
-            dict,
-        )
-        else []
-    )
-
-    _sf_verify_count = 0
-
-    for _sf_verify_nb in (
-        _sf_verify_notebooks or []
-    ):
-
-        if not isinstance(
-            _sf_verify_nb,
-            dict,
-        ):
-            continue
-
-        _sf_verify_id = (
-            _sf_verify_nb.get("id")
-            or _sf_verify_nb.get("notebook_id")
-        )
-
-        if str(
-            _sf_verify_id or ""
-        ).strip() == _sf_target_id:
-
-            _sf_verify_resources = (
-                _sf_verify_nb.get(
-                    "resources"
-                )
-                or []
-            )
-
-            if isinstance(
-                _sf_verify_resources,
-                list,
-            ):
-
-                _sf_verify_count = len(
-                    _sf_verify_resources
-                )
-
-            break
-
-    if _sf_verify_count <= 0:
-
-        raise RuntimeError(
-            "Resource write verification failed. "
-            "notebooks.json still contains zero "
-            "resources for the selected notebook."
-        )
-
-    return {
-        "saved": True,
-        "notebook_id": _sf_target_id,
-        "resource_id": _sf_resource_id,
-        "resource_name": _sf_resource_name,
-        "resource_count": _sf_verify_count,
-    }
-
+    return None
 
 def _sf_kv2_history(notebook_id):
     try:
@@ -5321,7 +5125,7 @@ def _sf_render_knowledge_v2_ui():
         _sf_kv2_render_history(selected_id)
 
 if st.session_state.page == "GitHub Delivery":
-    render_github_delivery()
+    _sf_github_delivery_page()
 elif (
     st.session_state.page
     == "Command Center"

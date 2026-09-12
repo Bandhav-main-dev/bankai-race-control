@@ -17,24 +17,6 @@ from __future__ import annotations
 
 import json
 import os
-
-# SOUL FORGE — automatic .env loading
-try:
-    from dotenv import load_dotenv
-
-    _SF_PROJECT_ROOT = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../..")
-    )
-
-    _SF_ENV_FILE = os.path.join(
-        _SF_PROJECT_ROOT,
-        ".env"
-    )
-
-    load_dotenv(_SF_ENV_FILE, override=False)
-
-except ImportError:
-    pass
 import time
 from pathlib import Path
 from typing import Any
@@ -63,22 +45,9 @@ class OpenRouterProvider:
             or CONFIG_FILE
         )
 
-        # SOUL FORGE — force-load project .env
-        try:
-            from dotenv import load_dotenv
-        
-            _sf_project_root = Path(__file__).resolve().parents[2]
-            _sf_env_file = _sf_project_root / '.env'
-        
-            if _sf_env_file.exists():
-                load_dotenv(_sf_env_file, override=False)
-        except Exception:
-            pass
-        
-        self.api_key = os.getenv(
-            'OPENROUTER_API_KEY',
-            '',
-        ).strip()
+        self.api_key = os.environ.get(
+            "OPENROUTER_API_KEY"
+        )
 
         if not self.api_key:
             raise RuntimeError(

@@ -1,37 +1,4 @@
 
-# ================================================================
-# SOUL FORGE — EARLY .ENV BOOTSTRAP
-# Must remain at module level before application imports.
-# ================================================================
-
-_SF_STREAMLIT_ENV_BOOTSTRAP = True
-
-try:
-    import os as _sf_os
-    from pathlib import Path as _SFPath
-
-    _SF_PROJECT_ROOT = _SFPath(__file__).resolve().parents[2]
-    _SF_ENV_FILE = _SF_PROJECT_ROOT / ".env"
-
-    if _SF_ENV_FILE.exists():
-        try:
-            from dotenv import load_dotenv as _sf_load_dotenv
-
-            _sf_load_dotenv(
-                _SF_ENV_FILE,
-                override=False,
-            )
-        except ImportError:
-            # python-dotenv is optional here.
-            # The provider itself also attempts to load .env.
-            pass
-
-except Exception as _sf_env_error:
-    print(
-        f"[SOUL FORGE] .env loading warning: {_sf_env_error}"
-    )
-
-
 # ============================================================================
 # ⚔️ SOUL FORGE MEMORY HELPERS V1
 # ============================================================================
@@ -307,22 +274,6 @@ import time
 import streamlit as st
 
 import inspect
-from app.ui.soul_forge_github_delivery_ui import render_github_delivery
-
-from app.core.timer.pomodoro_engine import (
-    _sf_focus_init,
-    _sf_focus_now,
-    _sf_focus_recalculate,
-    _sf_focus_format,
-    _sf_focus_start,
-    _sf_focus_pause,
-    _sf_focus_resume,
-    _sf_focus_restart,
-    _sf_focus_stop,
-    _sf_focus_complete,
-)
-from app.ui.components.timer_bar import render_timer_bar
-
 
 
 
@@ -1177,26 +1128,257 @@ Rules:
 
 SF_FOCUS_VERSION = "1.0.0"
 
+SF_FOCUS_QUOTES = [
+    "One task. One target. No distraction.",
+    "Discipline creates momentum.",
+    "Build first. Perfect later.",
+    "The next lap starts now.",
+    "Small progress is still progress.",
+    "Focus is a superpower when you protect it.",
+    "You don't need more time. You need better focus.",
+    "One completed session moves the project forward.",
+    "Stay in the lane. Finish the task.",
+    "Bankai is control — control your focus.",
+    "Your future system is being built right now.",
+    "Don't watch the clock. Use it.",
+]
 
 
+def _sf_focus_init():
+    """Initialize the global SOUL FORGE focus session."""
+
+    defaults = {
+        "sf_focus_active": False,
+        "sf_focus_paused": False,
+        "sf_focus_task_id": None,
+        "sf_focus_task_title": "",
+        "sf_focus_project": "",
+        "sf_focus_priority": "",
+        "sf_focus_duration_seconds": 25 * 60,
+        "sf_focus_remaining_seconds": 25 * 60,
+        "sf_focus_started_at": None,
+        "sf_focus_pause_started_at": None,
+        "sf_focus_total_paused_seconds": 0,
+        "sf_focus_quote_index": 0,
+        "sf_focus_completed_sessions": 0,
+        "sf_focus_total_seconds_today": 0,
+        "sf_focus_session_start": None,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
+def _sf_focus_now():
+    return datetime.now()
 
 
+def _sf_focus_recalculate():
+    """
+    Calculate remaining time from timestamps.
+
+    This is intentionally timestamp based instead of relying on a loop.
+    Streamlit reruns the application frequently, so this keeps the timer
+    consistent when the user changes pages.
+    """
+
+    if not st.session_state.sf_focus_active:
+        return
+
+    if st.session_state.sf_focus_paused:
+        return
+
+    started_at = st.session_state.sf_focus_started_at
+
+    if not started_at:
+        return
+
+    if isinstance(started_at, str):
+        try:
+            started_at = datetime.fromisoformat(started_at)
+        except Exception:
+            return
+
+    total = int(st.session_state.sf_focus_duration_seconds)
+
+    paused = int(st.session_state.sf_focus_total_paused_seconds)
+
+    elapsed = (
+        _sf_focus_now() - started_at
+    ).total_seconds()
+
+    remaining = max(
+        0,
+        int(total - elapsed + paused)
+    )
+
+    st.session_state.sf_focus_remaining_seconds = remaining
+
+    if remaining <= 0:
+        _sf_focus_complete()
 
 
+def _sf_focus_format(seconds):
+    seconds = max(0, int(seconds))
+
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+    return f"{minutes:02d}:{secs:02d}"
 
 
+def _sf_focus_start(
+    task_id,
+    task_title,
+    duration_seconds,
+    project="",
+    priority="",
+):
+    """Start a new focus session."""
+
+    _sf_focus_init()
+
+    now = _sf_focus_now()
+
+    st.session_state.sf_focus_active = True
+    st.session_state.sf_focus_paused = False
+
+    st.session_state.sf_focus_task_id = str(task_id)
+    st.session_state.sf_focus_task_title = str(task_title)
+    st.session_state.sf_focus_project = str(project or "")
+    st.session_state.sf_focus_priority = str(priority or "")
+
+    st.session_state.sf_focus_duration_seconds = int(
+        duration_seconds
+    )
+
+    st.session_state.sf_focus_remaining_seconds = int(
+        duration_seconds
+    )
+
+    st.session_state.sf_focus_started_at = now.isoformat()
+    st.session_state.sf_focus_pause_started_at = None
+    st.session_state.sf_focus_total_paused_seconds = 0
+    st.session_state.sf_focus_session_start = now.isoformat()
+
+    st.session_state.sf_focus_quote_index = (
+        st.session_state.sf_focus_quote_index + 1
+    ) % len(SF_FOCUS_QUOTES)
 
 
+def _sf_focus_pause():
+    """Pause the active focus session."""
+
+    _sf_focus_init()
+
+    if not st.session_state.sf_focus_active:
+        return
+
+    if st.session_state.sf_focus_paused:
+        return
+
+    _sf_focus_recalculate()
+
+    st.session_state.sf_focus_paused = True
+    st.session_state.sf_focus_pause_started_at = (
+        _sf_focus_now().isoformat()
+    )
 
 
+def _sf_focus_resume():
+    """Resume a paused focus session."""
+
+    _sf_focus_init()
+
+    if not st.session_state.sf_focus_active:
+        return
+
+    if not st.session_state.sf_focus_paused:
+        return
+
+    pause_started = st.session_state.sf_focus_pause_started_at
+
+    if pause_started:
+        try:
+            pause_started_dt = datetime.fromisoformat(
+                pause_started
+            )
+
+            paused_seconds = (
+                _sf_focus_now() - pause_started_dt
+            ).total_seconds()
+
+            st.session_state.sf_focus_total_paused_seconds += int(
+                paused_seconds
+            )
+
+        except Exception:
+            pass
+
+    st.session_state.sf_focus_paused = False
+    st.session_state.sf_focus_pause_started_at = None
 
 
+def _sf_focus_restart():
+    """Restart the current task's focus session."""
+
+    _sf_focus_init()
+
+    if not st.session_state.sf_focus_task_id:
+        return
+
+    _sf_focus_start(
+        task_id=st.session_state.sf_focus_task_id,
+        task_title=st.session_state.sf_focus_task_title,
+        duration_seconds=st.session_state.sf_focus_duration_seconds,
+        project=st.session_state.sf_focus_project,
+        priority=st.session_state.sf_focus_priority,
+    )
 
 
+def _sf_focus_stop():
+    """Stop the current focus session."""
+
+    _sf_focus_init()
+
+    st.session_state.sf_focus_active = False
+    st.session_state.sf_focus_paused = False
+
+    st.session_state.sf_focus_task_id = None
+    st.session_state.sf_focus_task_title = ""
+    st.session_state.sf_focus_project = ""
+    st.session_state.sf_focus_priority = ""
+
+    st.session_state.sf_focus_remaining_seconds = 0
+
+    st.session_state.sf_focus_started_at = None
+    st.session_state.sf_focus_pause_started_at = None
+    st.session_state.sf_focus_total_paused_seconds = 0
+    st.session_state.sf_focus_session_start = None
 
 
+def _sf_focus_complete():
+    """Finish a focus session."""
+
+    if not st.session_state.sf_focus_active:
+        return
+
+    duration = int(
+        st.session_state.sf_focus_duration_seconds
+    )
+
+    st.session_state.sf_focus_completed_sessions += 1
+
+    st.session_state.sf_focus_total_seconds_today += duration
+
+    st.session_state.sf_focus_remaining_seconds = 0
+    st.session_state.sf_focus_active = False
+    st.session_state.sf_focus_paused = False
 
 
 # Initialize global focus state as soon as the application loads.
@@ -4003,968 +4185,21 @@ def _sf_focus_render_task_selector():
     return _sf_focus_render_global()
 
 
-
-# ============================================================================
-# SOUL FORGE — INDEPENDENT GLOBAL TIMER BAR
-# ============================================================================
-# Timer UI is independent from page routing.
-#
-# Timer bar:
-#   - reads timer state
-#   - controls timer engine
-#   - does NOT select pages
-#   - does NOT render pages
-#
-# Page router remains responsible for exactly one selected page.
-# ============================================================================
-
-render_timer_bar()
-
 # === SOUL FORGE GLOBAL HEADER END ===
 # === SOUL FORGE GLOBAL HEADER CALL BEGIN ===
 # === SOUL FORGE GLOBAL HEADER CALL END ===
 
+# ============================================================================
+# SOUL FORGE — GLOBAL POMODORO / 🗡️ ACTIVE TASK
+# Rendered BEFORE the page router so it stays visible on every page.
+# ============================================================================
+if st.session_state.get("page") != "Pomodoro":
+    _sf_focus_render_global()
 
 
 
 
 
-
-
-def _sf_kv2_notebook_items():
-    """
-    Normalize the existing notebooks.json representation into a list.
-    """
-    try:
-        data = _sf_load_knowledge_notebooks()
-    except Exception:
-        return []
-
-    if isinstance(data, list):
-        return [x for x in data if isinstance(x, dict)]
-
-    if isinstance(data, dict):
-        notebooks = data.get("notebooks")
-
-        if isinstance(notebooks, list):
-            return [x for x in notebooks if isinstance(x, dict)]
-
-        # Handle {notebook_id: notebook_data}
-        if data and all(isinstance(v, dict) for v in data.values()):
-            result = []
-
-            for key, value in data.items():
-                item = dict(value)
-                item.setdefault("id", key)
-                item.setdefault("notebook_id", key)
-                result.append(item)
-
-            return result
-
-    return []
-
-def _sf_kv2_notebook_id(nb):
-    return (
-        nb.get("notebook_id")
-        or nb.get("id")
-        or nb.get("slug")
-        or nb.get("key")
-    )
-
-def _sf_kv2_notebook_name(nb):
-    return (
-        nb.get("name")
-        or nb.get("title")
-        or nb.get("notebook_name")
-        or _sf_kv2_notebook_id(nb)
-        or "Untitled Notebook"
-    )
-
-def _sf_kv2_resources(nb):
-    resources = (
-        nb.get("resources")
-        or nb.get("sources")
-        or nb.get("files")
-        or []
-    )
-
-    if isinstance(resources, dict):
-        resources = list(resources.values())
-
-    if not isinstance(resources, list):
-        return []
-
-    return resources
-
-def _sf_kv2_create_notebook(name):
-    """
-    Create a notebook using the existing helper, adapting to its signature.
-    """
-    try:
-        fn = _sf_create_knowledge_notebook
-
-        sig = inspect.signature(fn)
-        params = sig.parameters
-
-        values = {}
-
-        for candidate in ("name", "title", "notebook_name"):
-            if candidate in params:
-                values[candidate] = name
-                break
-
-        result = fn(**values) if values else fn(name)
-
-        # Some implementations return the new notebook.
-        if result:
-            return result
-
-    except Exception as e:
-        st.error(f"Could not create notebook: {e}")
-
-    return None
-
-def _sf_kv2_active_id():
-    """
-    Resolve active notebook ID from session state or existing helper.
-    """
-    for key in (
-        "sf_active_knowledge_notebook_id",
-        "active_knowledge_notebook_id",
-        "knowledge_notebook_id",
-    ):
-        value = st.session_state.get(key)
-        if value:
-            return value
-
-    try:
-        active = _sf_get_active_knowledge_notebook()
-
-        if isinstance(active, dict):
-            return _sf_kv2_notebook_id(active)
-
-        if isinstance(active, str):
-            return active
-    except Exception:
-        pass
-
-    return None
-
-def _sf_kv2_set_active(notebook_id):
-    """
-    Set active notebook using the existing notebook helper and session state.
-    """
-    st.session_state["sf_active_knowledge_notebook_id"] = notebook_id
-    st.session_state["active_knowledge_notebook_id"] = notebook_id
-    st.session_state["knowledge_notebook_id"] = notebook_id
-
-    try:
-        _sf_set_active_knowledge_notebook(notebook_id)
-    except TypeError:
-        try:
-            fn = _sf_set_active_knowledge_notebook
-            sig = inspect.signature(fn)
-
-            if "notebook_id" in sig.parameters:
-                fn(notebook_id=notebook_id)
-            elif "id" in sig.parameters:
-                fn(id=notebook_id)
-        except Exception:
-            pass
-    except Exception:
-        pass
-
-def _sf_kv2_ingest(uploaded_file, notebook_id):
-    """
-    Use the existing SF-004 ingestion service.
-
-    No second RAG engine is created here.
-    """
-    import uuid
-    import tempfile
-
-    suffix = Path(uploaded_file.name).suffix or ".bin"
-
-    resource_id = (
-        "sf-res-"
-        + datetime.now().strftime("%Y%m%d%H%M%S")
-        + "-"
-        + uuid.uuid4().hex[:8]
-    )
-
-    temp_dir = Path(tempfile.gettempdir()) / "soul_forge_knowledge_v2"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-
-    target = temp_dir / f"{resource_id}{suffix}"
-
-    target.write_bytes(uploaded_file.getvalue())
-
-    # Try the existing ingestion service first.
-    try:
-        from app.services.soul_forge_ingestion import ingest_file
-
-        sig = inspect.signature(ingest_file)
-
-        values = {
-            "resource_id": resource_id,
-            "notebook_id": notebook_id,
-            "path": str(target),
-            "file_path": str(target),
-            "resource_name": uploaded_file.name,
-            "name": uploaded_file.name,
-            "extra_metadata": {
-                "original_name": uploaded_file.name,
-                "source": "soul_forge_knowledge_v2",
-            },
-            "metadata": {
-                "original_name": uploaded_file.name,
-                "source": "soul_forge_knowledge_v2",
-            },
-        }
-
-        kwargs = {}
-
-        for name in sig.parameters:
-            if name in values:
-                kwargs[name] = values[name]
-
-        result = ingest_file(**kwargs)
-
-        _sf_kv2_save_resource(
-            notebook_id=notebook_id,
-            resource_id=resource_id,
-            resource_name=uploaded_file.name,
-            metadata={
-                "original_name": uploaded_file.name,
-                "ingested_at": datetime.now().isoformat(),
-            },
-        )
-
-        return True, resource_id, result
-
-    except Exception as primary_error:
-
-        # Compatibility fallback to the existing Knowledge panel adapter.
-        try:
-            from app.ui.soul_forge_knowledge_panel import (
-                _ingest_uploaded_file,
-            )
-
-            fn = _ingest_uploaded_file
-            sig = inspect.signature(fn)
-
-            values = {
-                "uploaded_file": uploaded_file,
-                "file": uploaded_file,
-                "notebook_id": notebook_id,
-                "resource_id": resource_id,
-            }
-
-            kwargs = {
-                name: values[name]
-                for name in sig.parameters
-                if name in values
-            }
-
-            result = fn(**kwargs)
-
-            _sf_kv2_save_resource(
-                notebook_id=notebook_id,
-                resource_id=resource_id,
-                resource_name=uploaded_file.name,
-                metadata={
-                    "original_name": uploaded_file.name,
-                    "ingested_at": datetime.now().isoformat(),
-                },
-            )
-
-            return True, resource_id, result
-
-        except Exception as fallback_error:
-            return (
-                False,
-                resource_id,
-                f"Primary ingestion error: {primary_error}\n"
-                f"Fallback ingestion error: {fallback_error}",
-            )
-
-def _sf_kv2_answer(question, notebook_id):
-    """
-    Use the existing Knowledge Agent with notebook-scoped retrieval.
-    """
-    from app.services.soul_forge_knowledge_service import ask_knowledge
-
-    fn = ask_knowledge
-    sig = inspect.signature(fn)
-
-    values = {
-        "question": question,
-        "query": question,
-        "prompt": question,
-        "notebook_id": notebook_id,
-    }
-
-    kwargs = {
-        name: values[name]
-        for name in sig.parameters
-        if name in values
-    }
-
-    return fn(**kwargs)
-
-def _sf_kv2_render_sources(notebook):
-    st.subheader("SOURCES")
-
-    resources = _sf_kv2_resources(notebook)
-
-    if not resources:
-        st.info(
-            "This notebook has no resources yet. "
-            "Add a PDF, TXT, Markdown, or supported document from ASK."
-        )
-        return
-
-    st.caption(
-        f"{len(resources)} resource"
-        + ("" if len(resources) == 1 else "s")
-        + " belong to this notebook."
-    )
-
-    for index, resource in enumerate(resources, start=1):
-
-        if isinstance(resource, str):
-            name = resource
-            rid = resource
-            metadata = {}
-        else:
-            name = (
-                resource.get("name")
-                or resource.get("resource_name")
-                or resource.get("filename")
-                or resource.get("file_name")
-                or f"Resource {index}"
-            )
-
-            rid = (
-                resource.get("resource_id")
-                or resource.get("id")
-                or ""
-            )
-
-            metadata = resource.get("metadata") or {}
-
-        with st.container(border=True):
-            left, right = st.columns([5, 1])
-
-            with left:
-                st.markdown(f"**{name}**")
-
-                if rid:
-                    st.caption(f"Resource ID: {rid}")
-
-                if metadata:
-                    original = metadata.get("original_name")
-                    if original and original != name:
-                        st.caption(f"Original file: {original}")
-
-            with right:
-                st.caption(f"#{index}")
-
-def _sf_kv2_render_history(notebook_id):
-    st.subheader("HISTORY")
-
-    history = _sf_kv2_history(notebook_id)
-
-    if not history:
-        st.info(
-            "No questions have been asked in this notebook yet."
-        )
-        return
-
-    if isinstance(history, dict):
-        history = (
-            history.get("history")
-            or history.get("items")
-            or history.get("messages")
-            or []
-        )
-
-    if not isinstance(history, list):
-        history = [history]
-
-    for item in reversed(history):
-
-        if not isinstance(item, dict):
-            st.write(item)
-            continue
-
-        question = (
-            item.get("question")
-            or item.get("query")
-            or item.get("prompt")
-            or "Question"
-        )
-
-        answer = (
-            item.get("answer")
-            or item.get("response")
-            or item.get("text")
-            or ""
-        )
-
-        timestamp = (
-            item.get("timestamp")
-            or item.get("created_at")
-            or item.get("time")
-            or ""
-        )
-
-        with st.expander(
-            f"Q: {str(question)[:120]}",
-            expanded=False,
-        ):
-            if timestamp:
-                st.caption(timestamp)
-
-            if answer:
-                st.write(answer)
-            else:
-                st.caption("No stored answer text.")
-
-
-
-def _sf_knowledge_root():
-    root = Path(__file__).resolve().parents[2] / "data" / "knowledge"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
-
-def _sf_knowledge_notebooks_file():
-    return _sf_knowledge_root() / "notebooks.json"
-
-def _sf_load_knowledge_notebooks():
-    path = _sf_knowledge_notebooks_file()
-
-    if not path.exists():
-        payload = {
-            "version": 1,
-            "active_notebook": None,
-            "notebooks": []
-        }
-
-        path.write_text(
-            json.dumps(payload, indent=2),
-            encoding="utf-8"
-        )
-
-        return payload
-
-    try:
-        payload = json.loads(
-            path.read_text(encoding="utf-8")
-        )
-    except Exception:
-        payload = {
-            "version": 1,
-            "active_notebook": None,
-            "notebooks": []
-        }
-
-    if not isinstance(payload, dict):
-        payload = {
-            "version": 1,
-            "active_notebook": None,
-            "notebooks": []
-        }
-
-    payload.setdefault("version", 1)
-    payload.setdefault("active_notebook", None)
-    payload.setdefault("notebooks", [])
-
-    return payload
-
-def _sf_save_knowledge_notebooks(payload):
-    path = _sf_knowledge_notebooks_file()
-
-    path.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    path.write_text(
-        json.dumps(
-            payload,
-            indent=2,
-            ensure_ascii=False
-        ),
-        encoding="utf-8"
-    )
-
-def _sf_create_knowledge_notebook(name):
-    import uuid
-
-    payload = _sf_load_knowledge_notebooks()
-
-    notebook_id = (
-        "nb_"
-        + uuid.uuid4().hex[:12]
-    )
-
-    notebook = {
-        "id": notebook_id,
-        "name": name.strip(),
-        "created_at": datetime.now().isoformat(),
-        "resources": [],
-        "qa_history": []
-    }
-
-    payload["notebooks"].append(notebook)
-    payload["active_notebook"] = notebook_id
-
-    _sf_save_knowledge_notebooks(payload)
-
-    return notebook
-
-
-
-def _sf_kv2_save_resource(
-    notebook_id,
-    resource_id,
-    resource_name,
-    metadata=None,
-):
-    """
-    Persist one resource inside the selected notebook.
-
-    Source of truth:
-        data/knowledge/notebooks.json
-
-    This function intentionally does NOT modify the RAG index.
-    RAG ingestion is handled by soul_forge_ingestion.
-    """
-
-    from pathlib import Path as _SFResourcePath
-    from datetime import datetime as _SFResourceDatetime
-    import json as _SFResourceJson
-
-    # ------------------------------------------------
-    # Resolve project root
-    # ------------------------------------------------
-
-    _sf_root = _SFResourcePath(
-        __file__
-    ).resolve().parents[2]
-
-    _sf_notebooks_file = (
-        _sf_root
-        / "data"
-        / "knowledge"
-        / "notebooks.json"
-    )
-
-    _sf_notebooks_file.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    # ------------------------------------------------
-    # Load existing notebooks.json
-    # ------------------------------------------------
-
-    _sf_data = None
-
-    if _sf_notebooks_file.exists():
-
-        try:
-
-            _sf_data = _SFResourceJson.loads(
-                _sf_notebooks_file.read_text(
-                    encoding="utf-8"
-                )
-            )
-
-        except Exception:
-            _sf_data = None
-
-    # ------------------------------------------------
-    # Preserve existing structure
-    # ------------------------------------------------
-
-    if not isinstance(
-        _sf_data,
-        dict,
-    ):
-
-        _sf_data = {
-            "version": 1,
-            "active_notebook": None,
-            "notebooks": [],
-        }
-
-    _sf_data.setdefault(
-        "version",
-        1,
-    )
-
-    _sf_data.setdefault(
-        "active_notebook",
-        None,
-    )
-
-    _sf_notebooks = _sf_data.get(
-        "notebooks"
-    )
-
-    if not isinstance(
-        _sf_notebooks,
-        list,
-    ):
-
-        _sf_notebooks = []
-
-        _sf_data["notebooks"] = (
-            _sf_notebooks
-        )
-
-    # ------------------------------------------------
-    # Normalize target notebook ID
-    # ------------------------------------------------
-
-    _sf_target_id = str(
-        notebook_id or ""
-    ).strip()
-
-    if not _sf_target_id:
-        raise ValueError(
-            "Cannot save resource without notebook_id"
-        )
-
-    # ------------------------------------------------
-    # Find selected notebook
-    # ------------------------------------------------
-
-    _sf_notebook = None
-
-    for _sf_item in _sf_notebooks:
-
-        if not isinstance(
-            _sf_item,
-            dict,
-        ):
-            continue
-
-        _sf_item_id = (
-            _sf_item.get("id")
-            or _sf_item.get("notebook_id")
-            or _sf_item.get("slug")
-            or _sf_item.get("key")
-        )
-
-        if str(
-            _sf_item_id or ""
-        ).strip() == _sf_target_id:
-
-            _sf_notebook = _sf_item
-            break
-
-    # ------------------------------------------------
-    # Safety check
-    # ------------------------------------------------
-
-    if _sf_notebook is None:
-
-        raise ValueError(
-            "Selected notebook was not found in "
-            f"notebooks.json: {_sf_target_id}"
-        )
-
-    # ------------------------------------------------
-    # Ensure resources list exists
-    # ------------------------------------------------
-
-    _sf_resources = _sf_notebook.get(
-        "resources"
-    )
-
-    if _sf_resources is None:
-
-        _sf_resources = []
-
-        _sf_notebook["resources"] = (
-            _sf_resources
-        )
-
-    # ------------------------------------------------
-    # Normalize resource container
-    # ------------------------------------------------
-
-    if isinstance(
-        _sf_resources,
-        dict,
-    ):
-
-        _sf_resources = list(
-            _sf_resources.values()
-        )
-
-        _sf_notebook["resources"] = (
-            _sf_resources
-        )
-
-    if not isinstance(
-        _sf_resources,
-        list,
-    ):
-
-        _sf_resources = []
-
-        _sf_notebook["resources"] = (
-            _sf_resources
-        )
-
-    # ------------------------------------------------
-    # Normalize IDs
-    # ------------------------------------------------
-
-    _sf_resource_id = str(
-        resource_id or ""
-    ).strip()
-
-    _sf_resource_name = str(
-        resource_name or "Untitled resource"
-    ).strip()
-
-    if not _sf_resource_id:
-        raise ValueError(
-            "Cannot save resource without resource_id"
-        )
-
-    # ------------------------------------------------
-    # Metadata
-    # ------------------------------------------------
-
-    _sf_metadata = {}
-
-    if isinstance(
-        metadata,
-        dict,
-    ):
-
-        _sf_metadata.update(
-            metadata
-        )
-
-    _sf_metadata.setdefault(
-        "original_name",
-        _sf_resource_name,
-    )
-
-    _sf_metadata.setdefault(
-        "ingested_at",
-        _SFResourceDatetime.now().isoformat(),
-    )
-
-    # ------------------------------------------------
-    # Resource record
-    # ------------------------------------------------
-
-    _sf_record = {
-        "resource_id": _sf_resource_id,
-        "name": _sf_resource_name,
-        "resource_name": _sf_resource_name,
-        "metadata": _sf_metadata,
-    }
-
-    # ------------------------------------------------
-    # Update existing resource if same ID exists
-    # ------------------------------------------------
-
-    _sf_updated = False
-
-    for _sf_index, _sf_existing in enumerate(
-        _sf_resources
-    ):
-
-        if isinstance(
-            _sf_existing,
-            dict,
-        ):
-
-            _sf_existing_id = (
-                _sf_existing.get(
-                    "resource_id"
-                )
-                or _sf_existing.get(
-                    "id"
-                )
-            )
-
-            if str(
-                _sf_existing_id or ""
-            ).strip() == _sf_resource_id:
-
-                # Preserve any existing metadata.
-                _sf_existing_metadata = (
-                    _sf_existing.get(
-                        "metadata"
-                    )
-                )
-
-                if isinstance(
-                    _sf_existing_metadata,
-                    dict,
-                ):
-
-                    _sf_record["metadata"] = {
-                        **_sf_existing_metadata,
-                        **_sf_metadata,
-                    }
-
-                _sf_resources[
-                    _sf_index
-                ] = _sf_record
-
-                _sf_updated = True
-                break
-
-    # ------------------------------------------------
-    # Add new resource
-    # ------------------------------------------------
-
-    if not _sf_updated:
-
-        _sf_resources.append(
-            _sf_record
-        )
-
-    # ------------------------------------------------
-    # Keep active notebook synchronized
-    # ------------------------------------------------
-
-    _sf_data["active_notebook"] = (
-        _sf_target_id
-    )
-
-    # ------------------------------------------------
-    # Atomic-ish write
-    # ------------------------------------------------
-
-    _sf_temp_file = (
-        _sf_notebooks_file.with_suffix(
-            ".json.tmp"
-        )
-    )
-
-    _sf_temp_file.write_text(
-        _SFResourceJson.dumps(
-            _sf_data,
-            indent=2,
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
-
-    _sf_temp_file.replace(
-        _sf_notebooks_file
-    )
-
-    # ------------------------------------------------
-    # Verify the write immediately
-    # ------------------------------------------------
-
-    _sf_verify = _SFResourceJson.loads(
-        _sf_notebooks_file.read_text(
-            encoding="utf-8"
-        )
-    )
-
-    _sf_verify_notebooks = (
-        _sf_verify.get("notebooks")
-        if isinstance(
-            _sf_verify,
-            dict,
-        )
-        else []
-    )
-
-    _sf_verify_count = 0
-
-    for _sf_verify_nb in (
-        _sf_verify_notebooks or []
-    ):
-
-        if not isinstance(
-            _sf_verify_nb,
-            dict,
-        ):
-            continue
-
-        _sf_verify_id = (
-            _sf_verify_nb.get("id")
-            or _sf_verify_nb.get("notebook_id")
-        )
-
-        if str(
-            _sf_verify_id or ""
-        ).strip() == _sf_target_id:
-
-            _sf_verify_resources = (
-                _sf_verify_nb.get(
-                    "resources"
-                )
-                or []
-            )
-
-            if isinstance(
-                _sf_verify_resources,
-                list,
-            ):
-
-                _sf_verify_count = len(
-                    _sf_verify_resources
-                )
-
-            break
-
-    if _sf_verify_count <= 0:
-
-        raise RuntimeError(
-            "Resource write verification failed. "
-            "notebooks.json still contains zero "
-            "resources for the selected notebook."
-        )
-
-    return {
-        "saved": True,
-        "notebook_id": _sf_target_id,
-        "resource_id": _sf_resource_id,
-        "resource_name": _sf_resource_name,
-        "resource_count": _sf_verify_count,
-    }
-
-
-def _sf_kv2_history(notebook_id):
-    try:
-        from app.services.soul_forge_knowledge_service import (
-            get_knowledge_history,
-        )
-
-        fn = get_knowledge_history
-        sig = inspect.signature(fn)
-
-        values = {
-            "notebook_id": notebook_id,
-        }
-
-        kwargs = {
-            name: values[name]
-            for name in sig.parameters
-            if name in values
-        }
-
-        return fn(**kwargs)
-
-    except Exception:
-        return []
 
 def _sf_render_knowledge_v2_ui():
     """
@@ -5321,7 +4556,7 @@ def _sf_render_knowledge_v2_ui():
         _sf_kv2_render_history(selected_id)
 
 if st.session_state.page == "GitHub Delivery":
-    render_github_delivery()
+    _sf_github_delivery_page()
 elif (
     st.session_state.page
     == "Command Center"
@@ -5408,14 +4643,100 @@ with c3:
 # SOUL FORGE — KNOWLEDGE NOTEBOOK SYSTEM V1
 # ============================================================================
 
+def _sf_knowledge_root():
+    root = Path(__file__).resolve().parents[2] / "data" / "knowledge"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
 
 
+def _sf_knowledge_notebooks_file():
+    return _sf_knowledge_root() / "notebooks.json"
 
 
+def _sf_load_knowledge_notebooks():
+    path = _sf_knowledge_notebooks_file()
+
+    if not path.exists():
+        payload = {
+            "version": 1,
+            "active_notebook": None,
+            "notebooks": []
+        }
+
+        path.write_text(
+            json.dumps(payload, indent=2),
+            encoding="utf-8"
+        )
+
+        return payload
+
+    try:
+        payload = json.loads(
+            path.read_text(encoding="utf-8")
+        )
+    except Exception:
+        payload = {
+            "version": 1,
+            "active_notebook": None,
+            "notebooks": []
+        }
+
+    if not isinstance(payload, dict):
+        payload = {
+            "version": 1,
+            "active_notebook": None,
+            "notebooks": []
+        }
+
+    payload.setdefault("version", 1)
+    payload.setdefault("active_notebook", None)
+    payload.setdefault("notebooks", [])
+
+    return payload
 
 
+def _sf_save_knowledge_notebooks(payload):
+    path = _sf_knowledge_notebooks_file()
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    path.write_text(
+        json.dumps(
+            payload,
+            indent=2,
+            ensure_ascii=False
+        ),
+        encoding="utf-8"
+    )
 
 
+def _sf_create_knowledge_notebook(name):
+    import uuid
+
+    payload = _sf_load_knowledge_notebooks()
+
+    notebook_id = (
+        "nb_"
+        + uuid.uuid4().hex[:12]
+    )
+
+    notebook = {
+        "id": notebook_id,
+        "name": name.strip(),
+        "created_at": datetime.now().isoformat(),
+        "resources": [],
+        "qa_history": []
+    }
+
+    payload["notebooks"].append(notebook)
+    payload["active_notebook"] = notebook_id
+
+    _sf_save_knowledge_notebooks(payload)
+
+    return notebook
 
 
 def _sf_get_active_knowledge_notebook():
@@ -5851,30 +5172,489 @@ def _sf_kv2_call(fn, values=None):
     return fn(**kwargs)
 
 
+def _sf_kv2_notebook_items():
+    """
+    Normalize the existing notebooks.json representation into a list.
+    """
+    try:
+        data = _sf_load_knowledge_notebooks()
+    except Exception:
+        return []
+
+    if isinstance(data, list):
+        return [x for x in data if isinstance(x, dict)]
+
+    if isinstance(data, dict):
+        notebooks = data.get("notebooks")
+
+        if isinstance(notebooks, list):
+            return [x for x in notebooks if isinstance(x, dict)]
+
+        # Handle {notebook_id: notebook_data}
+        if data and all(isinstance(v, dict) for v in data.values()):
+            result = []
+
+            for key, value in data.items():
+                item = dict(value)
+                item.setdefault("id", key)
+                item.setdefault("notebook_id", key)
+                result.append(item)
+
+            return result
+
+    return []
 
 
+def _sf_kv2_notebook_id(nb):
+    return (
+        nb.get("notebook_id")
+        or nb.get("id")
+        or nb.get("slug")
+        or nb.get("key")
+    )
 
 
+def _sf_kv2_notebook_name(nb):
+    return (
+        nb.get("name")
+        or nb.get("title")
+        or nb.get("notebook_name")
+        or _sf_kv2_notebook_id(nb)
+        or "Untitled Notebook"
+    )
 
 
+def _sf_kv2_resources(nb):
+    resources = (
+        nb.get("resources")
+        or nb.get("sources")
+        or nb.get("files")
+        or []
+    )
+
+    if isinstance(resources, dict):
+        resources = list(resources.values())
+
+    if not isinstance(resources, list):
+        return []
+
+    return resources
 
 
+def _sf_kv2_create_notebook(name):
+    """
+    Create a notebook using the existing helper, adapting to its signature.
+    """
+    try:
+        fn = _sf_create_knowledge_notebook
+
+        sig = inspect.signature(fn)
+        params = sig.parameters
+
+        values = {}
+
+        for candidate in ("name", "title", "notebook_name"):
+            if candidate in params:
+                values[candidate] = name
+                break
+
+        result = fn(**values) if values else fn(name)
+
+        # Some implementations return the new notebook.
+        if result:
+            return result
+
+    except Exception as e:
+        st.error(f"Could not create notebook: {e}")
+
+    return None
 
 
+def _sf_kv2_active_id():
+    """
+    Resolve active notebook ID from session state or existing helper.
+    """
+    for key in (
+        "sf_active_knowledge_notebook_id",
+        "active_knowledge_notebook_id",
+        "knowledge_notebook_id",
+    ):
+        value = st.session_state.get(key)
+        if value:
+            return value
+
+    try:
+        active = _sf_get_active_knowledge_notebook()
+
+        if isinstance(active, dict):
+            return _sf_kv2_notebook_id(active)
+
+        if isinstance(active, str):
+            return active
+    except Exception:
+        pass
+
+    return None
 
 
+def _sf_kv2_set_active(notebook_id):
+    """
+    Set active notebook using the existing notebook helper and session state.
+    """
+    st.session_state["sf_active_knowledge_notebook_id"] = notebook_id
+    st.session_state["active_knowledge_notebook_id"] = notebook_id
+    st.session_state["knowledge_notebook_id"] = notebook_id
+
+    try:
+        _sf_set_active_knowledge_notebook(notebook_id)
+    except TypeError:
+        try:
+            fn = _sf_set_active_knowledge_notebook
+            sig = inspect.signature(fn)
+
+            if "notebook_id" in sig.parameters:
+                fn(notebook_id=notebook_id)
+            elif "id" in sig.parameters:
+                fn(id=notebook_id)
+        except Exception:
+            pass
+    except Exception:
+        pass
 
 
+def _sf_kv2_save_resource(
+    notebook_id,
+    resource_id,
+    resource_name,
+    metadata=None,
+):
+    """
+    Save resource metadata into the selected notebook using the existing
+    notebook storage helper.
+    """
+    try:
+        fn = _sf_add_knowledge_resource
+
+        sig = inspect.signature(fn)
+
+        values = {
+            "notebook_id": notebook_id,
+            "resource_id": resource_id,
+            "resource_name": resource_name,
+            "name": resource_name,
+            "metadata": metadata or {},
+            "resource": {
+                "resource_id": resource_id,
+                "name": resource_name,
+                "metadata": metadata or {},
+            },
+        }
+
+        kwargs = {}
+
+        for name in sig.parameters:
+            if name in values:
+                kwargs[name] = values[name]
+
+        if kwargs:
+            return fn(**kwargs)
+
+        return fn(
+            notebook_id,
+            resource_id,
+            resource_name,
+        )
+
+    except Exception as e:
+        st.warning(f"Resource metadata could not be saved: {e}")
+
+    return None
 
 
+def _sf_kv2_ingest(uploaded_file, notebook_id):
+    """
+    Use the existing SF-004 ingestion service.
+
+    No second RAG engine is created here.
+    """
+    import uuid
+    import tempfile
+
+    suffix = Path(uploaded_file.name).suffix or ".bin"
+
+    resource_id = (
+        "sf-res-"
+        + datetime.now().strftime("%Y%m%d%H%M%S")
+        + "-"
+        + uuid.uuid4().hex[:8]
+    )
+
+    temp_dir = Path(tempfile.gettempdir()) / "soul_forge_knowledge_v2"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    target = temp_dir / f"{resource_id}{suffix}"
+
+    target.write_bytes(uploaded_file.getvalue())
+
+    # Try the existing ingestion service first.
+    try:
+        from app.services.soul_forge_ingestion import ingest_file
+
+        sig = inspect.signature(ingest_file)
+
+        values = {
+            "resource_id": resource_id,
+            "notebook_id": notebook_id,
+            "path": str(target),
+            "file_path": str(target),
+            "resource_name": uploaded_file.name,
+            "name": uploaded_file.name,
+            "extra_metadata": {
+                "original_name": uploaded_file.name,
+                "source": "soul_forge_knowledge_v2",
+            },
+            "metadata": {
+                "original_name": uploaded_file.name,
+                "source": "soul_forge_knowledge_v2",
+            },
+        }
+
+        kwargs = {}
+
+        for name in sig.parameters:
+            if name in values:
+                kwargs[name] = values[name]
+
+        result = ingest_file(**kwargs)
+
+        _sf_kv2_save_resource(
+            notebook_id=notebook_id,
+            resource_id=resource_id,
+            resource_name=uploaded_file.name,
+            metadata={
+                "original_name": uploaded_file.name,
+                "ingested_at": datetime.now().isoformat(),
+            },
+        )
+
+        return True, resource_id, result
+
+    except Exception as primary_error:
+
+        # Compatibility fallback to the existing Knowledge panel adapter.
+        try:
+            from app.ui.soul_forge_knowledge_panel import (
+                _ingest_uploaded_file,
+            )
+
+            fn = _ingest_uploaded_file
+            sig = inspect.signature(fn)
+
+            values = {
+                "uploaded_file": uploaded_file,
+                "file": uploaded_file,
+                "notebook_id": notebook_id,
+                "resource_id": resource_id,
+            }
+
+            kwargs = {
+                name: values[name]
+                for name in sig.parameters
+                if name in values
+            }
+
+            result = fn(**kwargs)
+
+            _sf_kv2_save_resource(
+                notebook_id=notebook_id,
+                resource_id=resource_id,
+                resource_name=uploaded_file.name,
+                metadata={
+                    "original_name": uploaded_file.name,
+                    "ingested_at": datetime.now().isoformat(),
+                },
+            )
+
+            return True, resource_id, result
+
+        except Exception as fallback_error:
+            return (
+                False,
+                resource_id,
+                f"Primary ingestion error: {primary_error}\n"
+                f"Fallback ingestion error: {fallback_error}",
+            )
 
 
+def _sf_kv2_answer(question, notebook_id):
+    """
+    Use the existing Knowledge Agent with notebook-scoped retrieval.
+    """
+    from app.services.soul_forge_knowledge_service import ask_knowledge
+
+    fn = ask_knowledge
+    sig = inspect.signature(fn)
+
+    values = {
+        "question": question,
+        "query": question,
+        "prompt": question,
+        "notebook_id": notebook_id,
+    }
+
+    kwargs = {
+        name: values[name]
+        for name in sig.parameters
+        if name in values
+    }
+
+    return fn(**kwargs)
 
 
+def _sf_kv2_history(notebook_id):
+    try:
+        from app.services.soul_forge_knowledge_service import (
+            get_knowledge_history,
+        )
+
+        fn = get_knowledge_history
+        sig = inspect.signature(fn)
+
+        values = {
+            "notebook_id": notebook_id,
+        }
+
+        kwargs = {
+            name: values[name]
+            for name in sig.parameters
+            if name in values
+        }
+
+        return fn(**kwargs)
+
+    except Exception:
+        return []
 
 
+def _sf_kv2_render_sources(notebook):
+    st.subheader("SOURCES")
+
+    resources = _sf_kv2_resources(notebook)
+
+    if not resources:
+        st.info(
+            "This notebook has no resources yet. "
+            "Add a PDF, TXT, Markdown, or supported document from ASK."
+        )
+        return
+
+    st.caption(
+        f"{len(resources)} resource"
+        + ("" if len(resources) == 1 else "s")
+        + " belong to this notebook."
+    )
+
+    for index, resource in enumerate(resources, start=1):
+
+        if isinstance(resource, str):
+            name = resource
+            rid = resource
+            metadata = {}
+        else:
+            name = (
+                resource.get("name")
+                or resource.get("resource_name")
+                or resource.get("filename")
+                or resource.get("file_name")
+                or f"Resource {index}"
+            )
+
+            rid = (
+                resource.get("resource_id")
+                or resource.get("id")
+                or ""
+            )
+
+            metadata = resource.get("metadata") or {}
+
+        with st.container(border=True):
+            left, right = st.columns([5, 1])
+
+            with left:
+                st.markdown(f"**{name}**")
+
+                if rid:
+                    st.caption(f"Resource ID: {rid}")
+
+                if metadata:
+                    original = metadata.get("original_name")
+                    if original and original != name:
+                        st.caption(f"Original file: {original}")
+
+            with right:
+                st.caption(f"#{index}")
 
 
+def _sf_kv2_render_history(notebook_id):
+    st.subheader("HISTORY")
+
+    history = _sf_kv2_history(notebook_id)
+
+    if not history:
+        st.info(
+            "No questions have been asked in this notebook yet."
+        )
+        return
+
+    if isinstance(history, dict):
+        history = (
+            history.get("history")
+            or history.get("items")
+            or history.get("messages")
+            or []
+        )
+
+    if not isinstance(history, list):
+        history = [history]
+
+    for item in reversed(history):
+
+        if not isinstance(item, dict):
+            st.write(item)
+            continue
+
+        question = (
+            item.get("question")
+            or item.get("query")
+            or item.get("prompt")
+            or "Question"
+        )
+
+        answer = (
+            item.get("answer")
+            or item.get("response")
+            or item.get("text")
+            or ""
+        )
+
+        timestamp = (
+            item.get("timestamp")
+            or item.get("created_at")
+            or item.get("time")
+            or ""
+        )
+
+        with st.expander(
+            f"Q: {str(question)[:120]}",
+            expanded=False,
+        ):
+            if timestamp:
+                st.caption(timestamp)
+
+            if answer:
+                st.write(answer)
+            else:
+                st.caption("No stored answer text.")
 
 
 

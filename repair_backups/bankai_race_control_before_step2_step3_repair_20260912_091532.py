@@ -321,7 +321,6 @@ from app.core.timer.pomodoro_engine import (
     _sf_focus_stop,
     _sf_focus_complete,
 )
-from app.ui.components.timer_bar import render_timer_bar
 
 
 
@@ -4003,26 +4002,16 @@ def _sf_focus_render_task_selector():
     return _sf_focus_render_global()
 
 
-
-# ============================================================================
-# SOUL FORGE — INDEPENDENT GLOBAL TIMER BAR
-# ============================================================================
-# Timer UI is independent from page routing.
-#
-# Timer bar:
-#   - reads timer state
-#   - controls timer engine
-#   - does NOT select pages
-#   - does NOT render pages
-#
-# Page router remains responsible for exactly one selected page.
-# ============================================================================
-
-render_timer_bar()
-
 # === SOUL FORGE GLOBAL HEADER END ===
 # === SOUL FORGE GLOBAL HEADER CALL BEGIN ===
 # === SOUL FORGE GLOBAL HEADER CALL END ===
+
+# ============================================================================
+# SOUL FORGE — GLOBAL POMODORO / 🗡️ ACTIVE TASK
+# Rendered BEFORE the page router so it stays visible on every page.
+# ============================================================================
+if st.session_state.get("page") != "Pomodoro":
+    _sf_focus_render_global()
 
 
 
